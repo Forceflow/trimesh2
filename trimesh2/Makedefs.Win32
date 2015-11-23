@@ -1,0 +1,72 @@
+PATHS = /usr/bin/i686-pc-mingw32- /usr/bin/i686-w64-mingw32-
+CC := $(or $(firstword $(realpath $(foreach path,$(PATHS),$(path)gcc))), $(error Couldn't find gcc))
+CXX := $(or $(firstword $(realpath $(foreach path,$(PATHS),$(path)g++))), $(error Couldn't find g++))
+AR := $(or $(firstword $(realpath $(foreach path,$(PATHS),$(path)ar))), $(error Couldn't find ar))
+WINDRES := $(or $(firstword $(realpath $(foreach path,$(PATHS),$(path)windres))), $(error Couldn't find windres))
+
+EXE = .exe
+
+ARCHOPTS = -m32 -march=core2 -mtune=native -mfpmath=sse
+ARCHOPTS += -fopenmp
+COPTS = -Wall -Wextra -Wno-parentheses -Wno-unused -Wno-unknown-pragmas
+
+ifdef DEBUG
+	COPTS += -ggdb3
+else
+	COPTS += -O2 -funroll-loops -fomit-frame-pointer
+	COPTS += -fno-math-errno -funsafe-math-optimizations
+
+	# Workaround for g++ 4.5.2
+	COPTS += -fno-caller-saves -fno-gcse
+
+	# No commandline window
+	#COPTS += -mwindows
+
+	LDOPTS += -s
+endif
+
+CXXOPTS = $(COPTS)
+CFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(COPTS)
+CXXFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(CXXOPTS)
+LDFLAGS = $(LIBDIR) $(LDOPTS)
+
+
+LIBS = -lm
+GLLIBS = -lgluit -lwinmm -lopengl32 -lglu32 -lgdi32
+CHOLMODLIBS = -lcholmod -lamd -lcolamd -lccolamd -lcamd -lmetis -llapack -lf77blas -lcblas -latlas -lg2c
+
+
+$(OBJDIR)/%.o: %.c
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cc
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cpp
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+
+
+define LINK
+	@ echo "Linking $@"
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
+endef
+
+define STATICLIB
+	@ echo "Creating library $@"
+	@ rm -f $@
+	@ $(AR) -rcs $@ $^
+endef
+
+define SHAREDLIB
+	@ echo "Creating library $@"
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -shared $^ -o $@
+endef
+
+
+-include $(OBJDIR)/*.d
+

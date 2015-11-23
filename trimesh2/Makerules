@@ -1,0 +1,94 @@
+#
+# Makerules
+#
+# Pays attention to the following variables:
+#  DEBUG = y      - debugging compiler flags
+#  UNAME = xxxxx  - cross-compile for the given platform
+#                   (In particular, you can say UNAME = Win32 if mingw
+#		     is installed to cross-compile for Windows, or
+#		     UNAME = Linux to get 32-bit binaries on Linux x64)
+#                   If UNAME undefined on input, gets defined here.
+#  DESTDIR = xxxx - Place to put output binaries.
+#  MAKERULESDIR   - Where to find Makerules and Makedefs
+#
+#
+# Defines the following variables:
+#  UNAME          - destination system type (if not set by user)
+#  OBJDIR         - directory for object files
+#  CC             - C compiler
+#  CXX            - C++ compiler
+#  CFLAGS         - C compiler flags
+#  CXXFLAGS       - C++ compiler flags
+#  LDFLAGS        - Linker flags
+#  LIBS           - Libraries
+#  GLLIBS         - OpenGL libraries
+#  EXE            - Extension of executables (.exe under Win32)
+#  LINK           - The entire linking process
+#  STATICLIB      - Create .a archive
+#  SHAREDLIB      - Create .so archive
+#  
+#
+# Client Makefiles need to define a "default:" rule
+# - SMR
+#
+
+ifdef windir
+        UNAME := Win32
+else
+        UNAME := $(shell uname)
+        UNAME := $(patsubst CYGWIN%,Win32,$(UNAME))
+        UNAME := $(patsubst MINGW%,Win32,$(UNAME))
+
+	ifeq ($(UNAME),Linux)
+		ARCH := $(shell uname -m)
+		ifeq ($(ARCH),x86_64)
+			UNAME := Linux64
+		endif
+	endif
+	ifeq ($(UNAME),Darwin)
+		IS64 := $(shell sysctl -n hw.cpu64bit_capable)
+		ifeq ($(IS64),1)
+			UNAME := Darwin64
+		endif
+	endif
+endif
+
+ifndef DESTDIR
+        DESTDIR = .
+endif
+
+OBJDIR = OBJ.$(UNAME)
+all: $(OBJDIR) $(DESTDIR) default
+
+$(OBJDIR) $(DESTDIR):
+	-mkdir $@
+
+ifdef MAKERULESDIR
+        include $(MAKERULESDIR)/Makedefs.$(UNAME)
+else
+        include Makedefs.$(UNAME)
+endif
+
+ifdef DEBUG
+        DEFINES += -DDEBUG
+endif
+debug:
+	$(MAKE) DEBUG=y
+
+win32:
+	$(MAKE) UNAME=Win32
+
+linux32:
+	$(MAKE) UNAME=Linux
+
+linux64:
+	$(MAKE) UNAME=Linux64
+
+darwin32:
+	$(MAKE) UNAME=Darwin
+
+darwin64:
+	$(MAKE) UNAME=Darwin64
+
+.PHONY: all default clean debug win32 linux32 linux64 darwin32 darwin64
+

@@ -1,0 +1,54 @@
+# Tested for gcc 3.3.2
+CC = gcc
+CXX = g++
+AR = ar
+
+ifdef DEBUG
+	COPTS += -ggdb3
+	COPTS += -Wall -W -Wno-unused -Wno-sign-compare -Wno-unknown-pragmas
+	CXXOPTS = $(COPTS)
+else
+	COPTS += -O3 -ffast-math -fomit-frame-pointer -funroll-loops
+	COPTS += -Wall -W -Wno-unused -Wno-sign-compare -Wno-unknown-pragmas
+	CXXOPTS = $(COPTS)
+	LDOPTS = -s
+endif
+
+CFLAGS = $(INCLUDES) $(DEFINES) $(COPTS)
+CXXFLAGS = $(INCLUDES) $(DEFINES) $(CXXOPTS)
+LDFLAGS = $(LIBDIR) $(LDOPTS)
+
+LIBS = -lm
+GLLIBS = -lgluit -lGL -lGLU -lX11 -lXmu
+
+$(OBJDIR)/%.o: %.c
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cc
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cpp
+	@ echo "Compiling $<"
+	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+
+define LINK
+	@ echo "Linking $@"
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
+endef
+
+define STATICLIB
+	@ echo "Creating library $@"
+	@ rm -f $@
+	@ $(AR) -rcs $@ $^
+endef
+
+define SHAREDLIB
+	@ echo "Creating library $@"
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -shared $^ -o $@
+endef
+
+-include $(OBJDIR)/*.d
