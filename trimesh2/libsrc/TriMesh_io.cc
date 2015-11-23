@@ -30,7 +30,6 @@ using namespace std;
 
 #define BIGNUM 1.0e10f
 
-
 namespace trimesh {
 
 // Forward declarations

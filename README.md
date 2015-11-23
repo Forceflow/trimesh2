@@ -4,3 +4,7 @@ This is a fork of the trimesh2 library (originally by [Szymon Rusinkiewicz](http
 For original project, see [the original Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
 
 Original MSVC project by Bengt Rosenberger.
+
+Notable changes/additions to vanilla trimesh2
+ * MSVC project for Visual Studio Community Edition 2015
+ * Added 64-bit support

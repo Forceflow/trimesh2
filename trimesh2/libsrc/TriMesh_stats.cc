@@ -25,7 +25,7 @@ float TriMesh::stat(StatOp op, StatVal val)
 			need_neighbors();
 			int nv = vertices.size();
 			for (int i = 0; i < nv; i++)
-				vals.push_back(neighbors[i].size());
+				vals.push_back((float) neighbors[i].size());
 			break;
 		}
 		case STAT_FACEAREA: {

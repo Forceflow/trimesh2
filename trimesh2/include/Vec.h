@@ -817,7 +817,7 @@ static inline const T angle(const Vec<D,T> &v1, const Vec<D,T> &v2)
 
 
 // POSIX / C99 compatibility functions for MSVS
-#ifdef _WIN32
+#if (_MSC_VER < 1700)
 #ifdef cbrt
 # undef cbrt
 #endif
