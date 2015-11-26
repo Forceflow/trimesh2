@@ -144,7 +144,7 @@ void find_initial_edge_neighbors(const TriMesh *themesh,
 		is_edge[i->second] = true;
 	}
 
-	for (size_t i = 0; i < nf; i++) {
+	for (size_t i = 0; i < nf; ++i) {
 		int v1 = themesh->faces[i][0];
 		int v2 = themesh->faces[i][1];
 		int v3 = themesh->faces[i][2];
@@ -220,7 +220,7 @@ vector<hole> *find_holes(edgeset *edges)
 				// that nei->second is not in newhole
 
 				// Put the bad edges into "badedges"
-				for (hole::iterator tmp = hi; tmp+1 != newhole.end(); tmp++)
+				for (hole::iterator tmp = hi; tmp+1 != newhole.end(); ++tmp)
 					badedges.insert(make_pair(*tmp, *(tmp+1)));
 				badedges.insert(make_pair(lastvert, nextvert));
 				newhole.erase(hi+1, newhole.end());
@@ -504,10 +504,10 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 	}
 	for (set<int>::const_iterator i = edgeverts.begin();
 	     i != edgeverts.end();
-	     i++) {
+	     ++i) {
 		for (set<int>::const_iterator j = initial_edge_neighbors[*i].begin();
 		     j != initial_edge_neighbors[*i].end();
-		     j++) {
+		     ++j) {
 			edges.insert(make_pair(*i, *j));
 			edges.insert(make_pair(*j, *i));
 		}

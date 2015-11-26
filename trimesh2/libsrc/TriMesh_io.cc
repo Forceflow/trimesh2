@@ -302,7 +302,7 @@ bool TriMesh::read_helper(const char *filename, TriMesh *mesh)
 			ok = read_vvd(f, mesh);
 	} else if (c == '#') {
 		char buf[1024];
-		fscanf(f, "%1024s", buf);
+		fscanf(f, "%1023s", buf);
 		if (LINE_IS("material") || LINE_IS("vertex") ||
 		    LINE_IS("shape_")) {
 			// Assume a ray file
@@ -707,7 +707,7 @@ static bool read_ray(FILE *f, TriMesh *mesh)
 	while (!feof(f)) {
 		char buf[1024];
 		buf[0] = '\0';
-		if (fscanf(f, " %1024s", buf) == 0)
+		if (fscanf(f, " %1023s", buf) == 0)
 			return true;
 		if (LINE_IS("#vertex_num")) {
 			// Do nothing
@@ -1045,7 +1045,7 @@ static bool read_verts_asc(FILE *f, TriMesh *mesh,
 				if (fscanf(f, "%f", &mesh->confidences[i]) != 1)
 					return false;
 			} else {
-				fscanf(f, " %1024s", buf);
+				fscanf(f, " %1023s", buf);
 			}
 		}
 	}
