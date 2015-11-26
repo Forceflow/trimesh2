@@ -33,7 +33,7 @@ void TriMesh::need_tstrips()
 	need_across_edge();
 
 	dprintf("Building triangle strips... ");
-	int nf = faces.size();
+	size_t nf = faces.size();
 
 	vector<int> todo;
 	vector<signed char> face_avail(nf);
@@ -144,9 +144,9 @@ void TriMesh::unpack_tstrips()
 		return;
 
 	dprintf("Unpacking triangle strips... ");
-	int nstrips = tstrips.size();
-	int nfaces = 0;
-	int i = 0;
+	size_t nstrips = tstrips.size();
+	size_t nfaces = 0;
+	size_t i = 0;
 	while (i < nstrips) {
 		nfaces += tstrips[i] - 2;
 		i += tstrips[i] + 1;
@@ -154,7 +154,7 @@ void TriMesh::unpack_tstrips()
 
 	faces.reserve(nfaces);
 
-	int len = 0;
+	size_t len = 0;
 	bool flip = false;
 	for (i = 0; i < nstrips; i++) {
 		if (len == 0) {
@@ -190,11 +190,11 @@ void TriMesh::convert_strips(TstripRep rep)
 		//collect_tris_in_strips(tstrips);
 		return;
 	}
-	int nstrips = tstrips.size();
+	size_t nstrips = tstrips.size();
 
 	if (rep == TSTRIP_TERM) {
-		int len = tstrips[0];
-		for (int i = 1; i < nstrips; i++) {
+		size_t len = tstrips[0];
+		for (size_t i = 1; i < nstrips; i++) {
 			if (len) {
 				tstrips[i-1] = tstrips[i];
 				len--;
@@ -205,8 +205,8 @@ void TriMesh::convert_strips(TstripRep rep)
 		}
 		tstrips.back() = -1;
 	} else {
-		int len = 0;
-		for (int i = nstrips - 2; i >= 0; i--) {
+		size_t len = 0;
+		for (size_t i = nstrips - 2; i >= 0; i--) {
 			if (tstrips[i] == -1) {
 				tstrips[i+1] = len;
 				len = 0;
@@ -227,11 +227,11 @@ static void collect_tris_in_strips(vector<int> &tstrips)
 	if (tstrips.empty())
 		return;
 	vector<int> tris;
-	int nstrips = tstrips.size();
+	size_t nstrips = tstrips.size();
 
-	int n = 0, offset = 0;
+	size_t n = 0, offset = 0;
 	bool have_tri = false, bad_strip = false;
-	for (int i = 0; i < nstrips; i++) {
+	for (size_t i = 0; i < nstrips; i++) {
 		if (n == 0) {
 			n = tstrips[i];
 			bad_strip = (n < 3);

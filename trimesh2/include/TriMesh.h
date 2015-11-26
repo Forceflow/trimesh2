@@ -26,21 +26,21 @@ public:
 	// Types
 	//
 	struct Face {
-		int v[3];
+		size_t v[3];
 
 		Face() {}
-		Face(const int &v0, const int &v1, const int &v2)
+		Face(const size_t &v0, const size_t &v1, const size_t &v2)
 			{ v[0] = v0; v[1] = v1; v[2] = v2; }
-		Face(const int *v_)
+		Face(const size_t *v_)
 			{ v[0] = v_[0]; v[1] = v_[1]; v[2] = v_[2]; }
 		template <class S> explicit Face(const S &x)
 			{ v[0] = x[0];  v[1] = x[1];  v[2] = x[2]; }
-		int &operator[] (int i) { return v[i]; }
-		const int &operator[] (int i) const { return v[i]; }
-		operator const int * () const { return &(v[0]); }
-		operator const int * () { return &(v[0]); }
-		operator int * () { return &(v[0]); }
-		int indexof(int v_) const
+		size_t &operator[] (size_t i) { return v[i]; }
+		const size_t &operator[] (size_t i) const { return v[i]; }
+		operator const size_t * () const { return &(v[0]); }
+		operator const size_t * () { return &(v[0]); }
+		operator size_t * () { return &(v[0]); }
+		int indexof(size_t v_) const
 		{
 			return (v[0] == v_) ? 0 :
 			       (v[1] == v_) ? 1 :
@@ -81,11 +81,11 @@ public:
 	::std::vector<Face> faces;
 
 	// Triangle strips
-	::std::vector<int> tstrips;
+	::std::vector<size_t> tstrips;
 
 	// Grid, if present
-	::std::vector<int> grid;
-	int grid_width, grid_height;
+	::std::vector<size_t> grid;
+	size_t grid_width, grid_height;
 
 	// Other per-vertex properties
 	::std::vector<Color> colors;
@@ -107,9 +107,9 @@ public:
 
 	// Connectivity structures:
 	//  For each vertex, all neighboring vertices
-	::std::vector< ::std::vector<int> > neighbors;
+	::std::vector< ::std::vector<size_t> > neighbors;
 	//  For each vertex, all neighboring faces
-	::std::vector< ::std::vector<int> > adjacentfaces;
+	::std::vector< ::std::vector<size_t> > adjacentfaces;
 	//  For each face, the three faces attached to its edges
 	//  (for example, across_edge[3][2] is the number of the face
 	//   that's touching the edge opposite vertex 2 of face 3)
@@ -174,7 +174,7 @@ public:
 	//
 
 	// Is vertex v on the mesh boundary?
-	bool is_bdy(int v)
+	bool is_bdy(size_t v)
 	{
 		if (neighbors.empty()) need_neighbors();
 		if (adjacentfaces.empty()) need_adjacentfaces();
@@ -182,7 +182,7 @@ public:
 	}
 
 	// Centroid of face f
-	vec centroid(int f)
+	vec centroid(size_t f)
 	{
 		if (faces.empty()) need_faces();
 		return (1.0f / 3.0f) *
@@ -192,7 +192,7 @@ public:
 	}
 
 	// Normal of face f
-	vec trinorm(int f)
+	vec trinorm(size_t f)
 	{
 		if (faces.empty()) need_faces();
 		return trimesh::trinorm(vertices[faces[f][0]], vertices[faces[f][1]],
@@ -200,7 +200,7 @@ public:
 	}
 
 	// Angle of corner j in triangle i
-	float cornerangle(int i, int j)
+	float cornerangle(size_t i, size_t j)
 	{
 		using namespace ::std;
 
@@ -212,7 +212,7 @@ public:
 	}
 
 	// Dihedral angle between face i and face across_edge[i][j]
-	float dihedral(int i, int j)
+	float dihedral(size_t i, size_t j)
 	{
 		if (across_edge.empty()) need_across_edge();
 		if (across_edge[i][j] < 0) return 0.0f;

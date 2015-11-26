@@ -40,7 +40,7 @@ void TriMesh::need_neighbors()
 
 	for (int i = 0; i < nf; i++) {
 		for (int j = 0; j < 3; j++) {
-			vector<int> &me = neighbors[faces[i][j]];
+			vector<size_t> &me = neighbors[faces[i][j]];
 			int n1 = faces[i][(j+1)%3];
 			int n2 = faces[i][(j+2)%3];
 			if (find(me.begin(), me.end(), n1) == me.end())
@@ -110,17 +110,17 @@ void TriMesh::need_across_edge()
 				continue;
 			int v1 = faces[i][(j+1)%3];
 			int v2 = faces[i][(j+2)%3];
-			const vector<int> &a1 = adjacentfaces[v1];
-			const vector<int> &a2 = adjacentfaces[v2];
+			const vector<size_t> &a1 = adjacentfaces[v1];
+			const vector<size_t> &a2 = adjacentfaces[v2];
 			for (size_t k1 = 0; k1 < a1.size(); k1++) {
 				int other = a1[k1];
 				if (other == i)
 					continue;
-				vector<int>::const_iterator it =
+				vector<size_t>::const_iterator it =
 					find(a2.begin(), a2.end(), other);
 				if (it == a2.end())
 					continue;
-				int ind = (faces[other].indexof(v1)+1)%3;
+				size_t ind = (faces[other].indexof(v1)+1)%3;
 				if (faces[other][(ind+1)%3] != v2)
 					continue;
 				across_edge[i][j] = other;

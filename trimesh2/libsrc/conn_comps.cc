@@ -64,7 +64,7 @@ static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
 // connected to f.
 static void find_connected(const TriMesh *mesh,
 			   vector<size_t> &comps, vector<size_t> &compsizes,
-			   size_t f, int whichcomponent, bool conn_vert)
+			   size_t f, size_t whichcomponent, bool conn_vert)
 {
 	stack<size_t> s;
 	s.push(f);
@@ -138,7 +138,7 @@ void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
 	for (size_t i = 0; i < nf; i++) {
 		if (comps[i] != NO_COMP)
 			continue;
-		int comp = compsizes.size();
+		size_t comp = compsizes.size();
 		comps[i] = comp;
 		compsizes.push_back(1);
 		find_connected(mesh, comps, compsizes, i, comp, conn_vert);
@@ -153,7 +153,7 @@ void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
 // the mesh.
 void select_comp(TriMesh *mesh, const vector<int> &comps, int whichcc)
 {
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] != whichcc)
@@ -169,16 +169,15 @@ void select_comp(TriMesh *mesh, const vector<int> &comps, int whichcc)
 // total_largest components), and delete all other vertices from the mesh.
 // Updates comps and compsizes.
 void select_big_comps(TriMesh *mesh,
-		      const vector<int> &comps, const vector<int> &compsizes,
-		      int min_size,
-		      int total_largest /* = std::numeric_limits<int>::max() */)
+		      const vector<int> &comps, const vector<int> &compsizes,size_t min_size,
+		      size_t total_largest /* = std::numeric_limits<int>::max() */)
 {
-	int ncomp = compsizes.size();
-	int keep_last = min(ncomp - 1, total_largest - 1);
+	size_t ncomp = compsizes.size();
+	size_t keep_last = min(ncomp - 1, total_largest - 1);
 	while (keep_last > -1 && compsizes[keep_last] < min_size)
 		keep_last--;
 
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] > keep_last)
@@ -193,16 +192,16 @@ void select_big_comps(TriMesh *mesh,
 // Select the connected components no bigger than max_size (but no more than
 // total_smallest components), and delete all other vertices from the mesh.
 void select_small_comps(TriMesh *mesh,
-			const vector<int> &comps, const vector<int> &compsizes,
-			int max_size,
-			int total_smallest /* = std::numeric_limits<int>::max() */)
+			const vector<size_t> &comps, const vector<size_t> &compsizes,
+	size_t max_size,
+	size_t total_smallest /* = std::numeric_limits<int>::max() */)
 {
-	int ncomp = compsizes.size();
-	int keep_first = max(0, ncomp - total_smallest);
+	size_t ncomp = compsizes.size();
+	size_t keep_first = max((size_t) 0, ncomp - total_smallest);
 	while (keep_first < ncomp && compsizes[keep_first] > max_size)
 		keep_first++;
 
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] < keep_first)

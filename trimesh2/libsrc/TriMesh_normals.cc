@@ -36,7 +36,7 @@ void TriMesh::need_normals()
 	// TODO: direct handling of grids
 	if (!tstrips.empty()) {
 		// Compute from tstrips
-		const int *t = &tstrips[0], *end = t + tstrips.size();
+		const size_t *t = &tstrips[0], *end = t + tstrips.size();
 		while (likely(t < end)) {
 			int striplen = *t - 2;
 			t += 3;
