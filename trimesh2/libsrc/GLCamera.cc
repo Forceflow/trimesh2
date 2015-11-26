@@ -199,7 +199,7 @@ void GLCamera::movez(int mousex, int mousey, xform &xf)
 {
 	float delta = MOVEZ_MULT / field_of_view * pixscale *
 		      ((mousex-lastmousex) - (mousey-lastmousey));
-	float dz = click_depth * (expm1(-delta));
+	float dz = click_depth * (exp(-delta) - 1.0f);
 	//xf = xform::trans(0, 0, -dz) * xf;
 	xf = xform::trans(dz * spincenter / len(spincenter)) * xf;
 

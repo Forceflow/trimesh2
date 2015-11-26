@@ -162,9 +162,9 @@ void TriMesh::need_curvatures()
 	}
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
-		pdir1[i] = (pdir1[i] CROSS normals[i]);
+		pdir1[i] = pdir1[i] CROSS normals[i];
 		normalize(pdir1[i]);
-		pdir2[i] = (normals[i] CROSS pdir1[i]);
+		pdir2[i] = normals[i] CROSS pdir1[i];
 	}
 
 	// Compute curvature per-face
