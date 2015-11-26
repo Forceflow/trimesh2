@@ -41,10 +41,10 @@ public:
 
 
 // Are two faces connected along an edge (or vertex)?
-static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
+static bool connected(const TriMesh *mesh, int f1, int f2, bool conn_vert)
 {
-	size_t f10=mesh->faces[f1][0], f11=mesh->faces[f1][1], f12=mesh->faces[f1][2];
-	size_t f20=mesh->faces[f2][0], f21=mesh->faces[f2][1], f22=mesh->faces[f2][2];
+	int f10=mesh->faces[f1][0], f11=mesh->faces[f1][1], f12=mesh->faces[f1][2];
+	int f20=mesh->faces[f2][0], f21=mesh->faces[f2][1], f22=mesh->faces[f2][2];
 
 	if (conn_vert)
 		return f10 == f20 || f10 == f21 || f10 == f22 ||
@@ -63,16 +63,16 @@ static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
 // Helper function for find_comps, below.  Finds and marks all the faces
 // connected to f.
 static void find_connected(const TriMesh *mesh,
-			   vector<size_t> &comps, vector<size_t> &compsizes,
-			   size_t f, int whichcomponent, bool conn_vert)
+			   vector<int> &comps, vector<int> &compsizes,
+			   int f, int whichcomponent, bool conn_vert)
 {
-	stack<size_t> s;
+	stack<int> s;
 	s.push(f);
 	while (!s.empty()) {
-		size_t currface = s.top();
+		int currface = s.top();
 		s.pop();
 		for (int i = 0; i < 3; i++) {
-			size_t vert = mesh->faces[currface][i];
+			int vert = mesh->faces[currface][i];
 			FOR_EACH_ADJACENT_FACE(mesh, vert, adjface) {
 				if (comps[adjface] != NO_COMP ||
 				    !connected(mesh, adjface, currface, conn_vert))
@@ -89,22 +89,22 @@ static void find_connected(const TriMesh *mesh,
 // Helper function for find_comps, below.  Sorts the connected components
 // from largest to smallest.  Renumbers the elements of compsizes to
 // reflect this new numbering.
-static void sort_comps(vector<size_t> &comps, vector<size_t> &compsizes)
+static void sort_comps(vector<int> &comps, vector<int> &compsizes)
 {
-	vector<size_t> comp_pointers(compsizes.size());
+	vector<int> comp_pointers(compsizes.size());
 	for (size_t i = 0; i < comp_pointers.size(); i++)
 		comp_pointers[i] = i;
 
 	sort(comp_pointers.begin(), comp_pointers.end(),
-	     CompareArrayElements< vector<size_t> >(compsizes));
+	     CompareArrayElements< vector<int> >(compsizes));
 
-	vector<size_t> remap_table(comp_pointers.size());
+	vector<int> remap_table(comp_pointers.size());
 	for (size_t i = 0; i < comp_pointers.size(); i++)
 		remap_table[comp_pointers[i]] = i;
 	for (size_t i = 0; i < comps.size(); i++)
 		comps[i] = remap_table[comps[i]];
 
-	vector<size_t> newcompsizes(compsizes.size());
+	vector<int> newcompsizes(compsizes.size());
 	for (size_t i = 0; i < compsizes.size(); i++)
 		newcompsizes[i] = compsizes[comp_pointers[i]];
 	compsizes = newcompsizes;
@@ -119,7 +119,7 @@ static void sort_comps(vector<size_t> &comps, vector<size_t> &compsizes)
 //   associated connected component.
 //  compsizes holds the size of each connected component.
 // Connected components are sorted from largest to smallest.
-void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
+void find_comps(TriMesh *mesh, vector<int> &comps, vector<int> &compsizes,
 		bool conn_vert /* = false */)
 {
 	if (mesh->vertices.empty())
@@ -129,13 +129,13 @@ void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
 		return;
 	mesh->need_adjacentfaces();
 
-	size_t nf = mesh->faces.size();
+	int nf = mesh->faces.size();
 	comps.clear();
 	comps.reserve(nf);
 	comps.resize(nf, NO_COMP);
 	compsizes.clear();
 
-	for (size_t i = 0; i < nf; i++) {
+	for (int i = 0; i < nf; i++) {
 		if (comps[i] != NO_COMP)
 			continue;
 		int comp = compsizes.size();
