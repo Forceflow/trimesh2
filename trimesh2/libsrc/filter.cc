@@ -411,7 +411,7 @@ void orient(TriMesh *mesh)
 			for (int j = 0; j < 3; j++) {
 				int v0 = mesh->faces[f][j];
 				int v1 = mesh->faces[f][(j+1)%3];
-				const vector<size_t> &a = mesh->adjacentfaces[v0];
+				const vector<int> &a = mesh->adjacentfaces[v0];
 				for (size_t k = 0; k < a.size(); k++) {
 					int f1 = a[k];
 					if (mesh->flags[f1] != NONE)
@@ -447,7 +447,7 @@ void orient(TriMesh *mesh)
 		else
 			if (v2[0] > v0[0]) j = 2;
 		int v = mesh->faces[f][j];
-		const vector<size_t> &a = mesh->adjacentfaces[v];
+		const vector<int> &a = mesh->adjacentfaces[v];
 		vec n;
 		for (size_t k = 0; k < a.size(); k++) {
 			int f1 = a[k];

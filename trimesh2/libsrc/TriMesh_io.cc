@@ -186,17 +186,6 @@ static inline void swap_double(double &x)
 	swap_64((unsigned char *) &x);
 }
 
-// UGLY HACK: We actually know this at COMPILE time
-static inline void swap(size_t &x)
-{
-	if (sizeof(size_t)) {
-		swap_64((unsigned char *)&x);
-	}
-	else {
-		swap_32((unsigned char *)&x);
-	}
-}
-
 
 // unget a whole string of characters
 static void pushback(const char *buf, FILE *f)
@@ -1177,7 +1166,7 @@ static bool read_strips_bin(FILE *f, TriMesh *mesh, bool need_swap)
 	COND_READ(true, mesh->tstrips[old_striplen], 4*striplen);
 	if (need_swap) {
 		for (int i = old_striplen; i < new_striplen; i++)
-			swap(mesh->tstrips[i]);
+			swap_int(mesh->tstrips[i]);
 	}
 
 	return true;
@@ -1219,7 +1208,7 @@ static bool read_grid_bin(FILE *f, TriMesh *mesh, bool need_swap)
 			if (!fread((void *)&(mesh->grid[i]), 4, 1, f))
 				return false;
 			if (need_swap)
-				swap(mesh->grid[i]);
+				swap_int(mesh->grid[i]);
 		}
 	}
 
@@ -1328,8 +1317,8 @@ static void check_ind_range(TriMesh *mesh)
 {
 	if (mesh->faces.empty())
 		return;
-	size_t min_ind = mesh->faces[0][0];
-	size_t max_ind = mesh->faces[0][0];
+	int min_ind = mesh->faces[0][0];
+	int max_ind = mesh->faces[0][0];
 	for (size_t i = 0; i < mesh->faces.size(); i++) {
 		for (int j = 0; j < 3; j++) {
 			min_ind = min(min_ind, mesh->faces[i][j]);
@@ -1337,7 +1326,7 @@ static void check_ind_range(TriMesh *mesh)
 		}
 	}
 
-	size_t nv = mesh->vertices.size();
+	int nv = mesh->vertices.size();
 
 	// All good
 	if (min_ind == 0 && max_ind == nv-1)
@@ -2135,9 +2124,9 @@ static bool write_faces_bin(TriMesh *mesh, FILE *f, bool need_swap,
 	mesh->need_faces();
 	if (need_swap) {
 		for (size_t i = 0; i < mesh->faces.size(); i++) {
-			swap(mesh->faces[i][0]);
-			swap(mesh->faces[i][1]);
-			swap(mesh->faces[i][2]);
+			swap_int(mesh->faces[i][0]);
+			swap_int(mesh->faces[i][1]);
+			swap_int(mesh->faces[i][2]);
 		}
 	}
 	bool ok = true;
@@ -2162,9 +2151,9 @@ static bool write_faces_bin(TriMesh *mesh, FILE *f, bool need_swap,
 out:
 	if (need_swap) {
 		for (size_t i = 0; i < mesh->faces.size(); i++) {
-			swap(mesh->faces[i][0]);
-			swap(mesh->faces[i][1]);
-			swap(mesh->faces[i][2]);
+			swap_int(mesh->faces[i][0]);
+			swap_int(mesh->faces[i][1]);
+			swap_int(mesh->faces[i][2]);
 		}
 	}
 	return ok;
@@ -2187,12 +2176,12 @@ static bool write_strips_bin(TriMesh *mesh, FILE *f, bool need_swap)
 {
 	if (need_swap) {
 		for (size_t i = 0; i < mesh->tstrips.size(); i++)
-			swap(mesh->tstrips[i]);
+			swap_int(mesh->tstrips[i]);
 	}
 	bool ok = (fwrite(&(mesh->tstrips[0]), 4*mesh->tstrips.size(), 1, f) == 1);
 	if (need_swap) {
 		for (size_t i = 0; i < mesh->tstrips.size(); i++)
-			swap(mesh->tstrips[i]);
+			swap_int(mesh->tstrips[i]);
 	}
 	return ok;
 }

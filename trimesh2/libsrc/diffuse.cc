@@ -90,7 +90,7 @@ static void diffuse_vert_field(TriMesh *themesh,
 
 	flag_curr++;
 	flags[v] = flag_curr;
-	vector<size_t> boundary = themesh->neighbors[v];
+	vector<int> boundary = themesh->neighbors[v];
 	while (!boundary.empty()) {
 		int n = boundary.back();
 		boundary.pop_back();
@@ -203,7 +203,7 @@ static void jones_filter(TriMesh *themesh,
 	float sum_w = 0.0f;
 
 	flag_curr++;
-	vector<size_t> boundary = themesh->adjacentfaces[v];
+	vector<int> boundary = themesh->adjacentfaces[v];
 	while (!boundary.empty()) {
 		int f = boundary.back();
 		boundary.pop_back();
