@@ -6,5 +6,7 @@ For original project, see [the original Trimesh2 homepage](http://gfx.cs.princet
 Original MSVC project by Bengt Rosenberger.
 
 Notable changes/additions to vanilla trimesh2
+ * Fixes for MSVC 12.0 / 14.0 compilation
+ * MSVC project for Visual Studio 2013 professional
  * MSVC project for Visual Studio Community Edition 2015
- * Added 64-bit support
+ * Added 64-bit MSVC compilation support
