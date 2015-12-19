@@ -68,19 +68,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetName>trimesh</TargetName>
-    <OutDir>..\..\lib.Win32\</OutDir>
+    <OutDir>..\..\lib.Win32.vs$(PlatformToolsetVersion)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>trimesh</TargetName>
-    <OutDir>..\..\lib.Win64\</OutDir>
+    <OutDir>..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>trimeshd</TargetName>
-    <OutDir>..\..\lib.Win32\</OutDir>
+    <OutDir>..\..\lib.Win32.vs$(PlatformToolsetVersion)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>trimeshd</TargetName>
-    <OutDir>..\..\lib.Win64\</OutDir>
+    <OutDir>..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
