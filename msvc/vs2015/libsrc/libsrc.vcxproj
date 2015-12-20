@@ -19,8 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}</ProjectGuid>
-    <RootNamespace>gluit</RootNamespace>
+    <ProjectGuid>{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}</ProjectGuid>
+    <RootNamespace>libsrc</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -65,42 +66,52 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <TargetName>trimesh</TargetName>
+    <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>trimesh</TargetName>
+    <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>$(ProjectName)d</TargetName>
-    <OutDir>..\..\lib.Win32\</OutDir>
+    <TargetName>trimeshd</TargetName>
+    <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>$(ProjectName)d</TargetName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\lib.Win32\</OutDir>
+    <TargetName>trimeshd</TargetName>
+    <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\gluit;..\..\include;..\..\include\GL</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\include</AdditionalIncludeDirectories>
+      <OpenMPSupport>false</OpenMPSupport>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS
+;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <OutputFile>$(OutDir)$(TargetName)d$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)trimeshd$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\gluit;..\..\include;..\..\include\GL</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\include</AdditionalIncludeDirectories>
+      <OpenMPSupport>false</OpenMPSupport>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS
+;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <OutputFile>$(OutDir)$(TargetName)d$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)trimeshd$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -109,14 +120,19 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\gluit;..\..\include;..\..\include\GL</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\include</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS
+;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <OutputFile>$(OutDir)trimesh$(TargetExt)</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -124,91 +140,67 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..\gluit;..\..\include;..\..\include\GL</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\..\include</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS
+;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <OutputFile>$(OutDir)trimesh$(TargetExt)</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\gluit\freeglut_callbacks.c" />
-    <ClCompile Include="..\..\gluit\freeglut_cursor.c" />
-    <ClCompile Include="..\..\gluit\freeglut_display.c" />
-    <ClCompile Include="..\..\gluit\freeglut_ext.c" />
-    <ClCompile Include="..\..\gluit\freeglut_font.c" />
-    <ClCompile Include="..\..\gluit\freeglut_font_data.c" />
-    <ClCompile Include="..\..\gluit\freeglut_gamemode.c" />
-    <ClCompile Include="..\..\gluit\freeglut_geometry.c" />
-    <ClCompile Include="..\..\gluit\freeglut_glutfont_definitions.c" />
-    <ClCompile Include="..\..\gluit\freeglut_init.c" />
-    <ClCompile Include="..\..\gluit\freeglut_joystick.c" />
-    <ClCompile Include="..\..\gluit\freeglut_main.c" />
-    <ClCompile Include="..\..\gluit\freeglut_menu.c" />
-    <ClCompile Include="..\..\gluit\freeglut_misc.c" />
-    <ClCompile Include="..\..\gluit\freeglut_overlay.c" />
-    <ClCompile Include="..\..\gluit\freeglut_state.c" />
-    <ClCompile Include="..\..\gluit\freeglut_stroke_mono_roman.c" />
-    <ClCompile Include="..\..\gluit\freeglut_stroke_roman.c" />
-    <ClCompile Include="..\..\gluit\freeglut_structure.c" />
-    <ClCompile Include="..\..\gluit\freeglut_teapot.c" />
-    <ClCompile Include="..\..\gluit\freeglut_videoresize.c" />
-    <ClCompile Include="..\..\gluit\freeglut_window.c" />
-    <ClCompile Include="..\..\gluit\glui.cc" />
-    <ClCompile Include="..\..\gluit\glui_add_controls.cc" />
-    <ClCompile Include="..\..\gluit\glui_algebra3.cc" />
-    <ClCompile Include="..\..\gluit\glui_arcball.cc" />
-    <ClCompile Include="..\..\gluit\glui_bitmaps.cc" />
-    <ClCompile Include="..\..\gluit\glui_bitmap_img_data.cc" />
-    <ClCompile Include="..\..\gluit\glui_button.cc" />
-    <ClCompile Include="..\..\gluit\glui_checkbox.cc" />
-    <ClCompile Include="..\..\gluit\glui_column.cc" />
-    <ClCompile Include="..\..\gluit\glui_control.cc" />
-    <ClCompile Include="..\..\gluit\glui_edittext.cc" />
-    <ClCompile Include="..\..\gluit\glui_img_checkbox_0.c" />
-    <ClCompile Include="..\..\gluit\glui_img_checkbox_0_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_checkbox_1.c" />
-    <ClCompile Include="..\..\gluit\glui_img_checkbox_1_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_downarrow.c" />
-    <ClCompile Include="..\..\gluit\glui_img_leftarrow.c" />
-    <ClCompile Include="..\..\gluit\glui_img_listbox_down.c" />
-    <ClCompile Include="..\..\gluit\glui_img_listbox_up.c" />
-    <ClCompile Include="..\..\gluit\glui_img_listbox_up_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_radiobutton_0.c" />
-    <ClCompile Include="..\..\gluit\glui_img_radiobutton_0_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_radiobutton_1.c" />
-    <ClCompile Include="..\..\gluit\glui_img_radiobutton_1_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_rightarrow.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spindown_0.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spindown_1.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spindown_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spinup_0.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spinup_1.c" />
-    <ClCompile Include="..\..\gluit\glui_img_spinup_dis.c" />
-    <ClCompile Include="..\..\gluit\glui_img_uparrow.c" />
-    <ClCompile Include="..\..\gluit\glui_listbox.cc" />
-    <ClCompile Include="..\..\gluit\glui_mouse_iaction.cc" />
-    <ClCompile Include="..\..\gluit\glui_node.cc" />
-    <ClCompile Include="..\..\gluit\glui_panel.cc" />
-    <ClCompile Include="..\..\gluit\glui_quaternion.cc" />
-    <ClCompile Include="..\..\gluit\glui_radio.cc" />
-    <ClCompile Include="..\..\gluit\glui_rollout.cc" />
-    <ClCompile Include="..\..\gluit\glui_rotation.cc" />
-    <ClCompile Include="..\..\gluit\glui_separator.cc" />
-    <ClCompile Include="..\..\gluit\glui_slider.cc" />
-    <ClCompile Include="..\..\gluit\glui_spinner.cc" />
-    <ClCompile Include="..\..\gluit\glui_statictext.cc" />
-    <ClCompile Include="..\..\gluit\glui_translation.cc" />
+    <ClInclude Include="..\..\..\include\Box.h" />
+    <ClInclude Include="..\..\..\include\bsphere.h" />
+    <ClInclude Include="..\..\..\include\Color.h" />
+    <ClInclude Include="..\..\..\include\GLCamera.h" />
+    <ClInclude Include="..\..\..\include\GL\freeglut.h" />
+    <ClInclude Include="..\..\..\include\GL\freeglut_ext.h" />
+    <ClInclude Include="..\..\..\include\GL\freeglut_std.h" />
+    <ClInclude Include="..\..\..\include\GL\glui.h" />
+    <ClInclude Include="..\..\..\include\GL\glut.h" />
+    <ClInclude Include="..\..\..\include\ICP.h" />
+    <ClInclude Include="..\..\..\include\KDtree.h" />
+    <ClInclude Include="..\..\..\include\lineqn.h" />
+    <ClInclude Include="..\..\..\include\mempool.h" />
+    <ClInclude Include="..\..\..\include\noise3d.h" />
+    <ClInclude Include="..\..\..\include\strutil.h" />
+    <ClInclude Include="..\..\..\include\timestamp.h" />
+    <ClInclude Include="..\..\..\include\TriMesh.h" />
+    <ClInclude Include="..\..\..\include\TriMesh_algo.h" />
+    <ClInclude Include="..\..\..\include\Vec.h" />
+    <ClInclude Include="..\..\..\include\XForm.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\gluit\freeglut_internal.h" />
-    <ClInclude Include="..\..\gluit\freeglut_teapot_data.h" />
-    <ClInclude Include="..\..\gluit\glui_algebra3.h" />
-    <ClInclude Include="..\..\gluit\glui_arcball.h" />
-    <ClInclude Include="..\..\gluit\glui_quaternion.h" />
-    <ClInclude Include="..\..\gluit\glui_stdinc.h" />
+    <ClCompile Include="..\..\..\libsrc\conn_comps.cc" />
+    <ClCompile Include="..\..\..\libsrc\diffuse.cc" />
+    <ClCompile Include="..\..\..\libsrc\edgeflip.cc" />
+    <ClCompile Include="..\..\..\libsrc\faceflip.cc" />
+    <ClCompile Include="..\..\..\libsrc\filter.cc" />
+    <ClCompile Include="..\..\..\libsrc\GLCamera.cc" />
+    <ClCompile Include="..\..\..\libsrc\ICP.cc" />
+    <ClCompile Include="..\..\..\libsrc\KDtree.cc" />
+    <ClCompile Include="..\..\..\libsrc\lmsmooth.cc" />
+    <ClCompile Include="..\..\..\libsrc\overlap.cc" />
+    <ClCompile Include="..\..\..\libsrc\remove.cc" />
+    <ClCompile Include="..\..\..\libsrc\reorder_verts.cc" />
+    <ClCompile Include="..\..\..\libsrc\shared.cc" />
+    <ClCompile Include="..\..\..\libsrc\subdiv.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_bounding.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_connectivity.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_curvature.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_grid.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_io.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_normals.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_pointareas.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_stats.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_tstrips.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
