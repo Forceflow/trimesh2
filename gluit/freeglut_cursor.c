@@ -188,25 +188,42 @@ void FGAPIENTRY glutSetCursor( int cursorID )
 
 #elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
 
-    /*
-     * This is a temporary solution only...
-     */
-    /* Set the cursor AND change it for this window class. */
+/* Note from Jeroen Baert: Imported this from latest Freeglut release to fix 64-bit compilation
+Current TriMesh library contains cherry-picked old FreeGlut source.
+Switching to full Freeglut 3.x would need serious refactoring. */
+
+// Note from Freeglut 3.0.0 : Joe Krahn is re-writing the following code.
+#if !defined(__MINGW64__) && _MSC_VER <= 1200
 #       define MAP_CURSOR(a,b)                                   \
         case a:                                                  \
             SetCursor( LoadCursor( NULL, b ) );                  \
-            SetClassLong( fgStructure.Window->Window.Handle,     \
+            SetClassLong( fgStructure.Window->Window.Handle,                 \
                           GCL_HCURSOR,                           \
                           ( LONG )LoadCursor( NULL, b ) );       \
         break;
-
-    /* Nuke the cursor AND change it for this window class. */
+/* Nuke the cursor AND change it for this window class. */
 #       define ZAP_CURSOR(a,b)                                   \
         case a:                                                  \
             SetCursor( NULL );                                   \
-            SetClassLong( fgStructure.Window->Window.Handle,     \
+            SetClassLong( fgStructure.Window->Window.Handle,                 \
                           GCL_HCURSOR, ( LONG )NULL );           \
         break;
+#else
+#       define MAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( LoadCursor( NULL, b ) );                  \
+            SetClassLongPtr( fgStructure.Window->Window.Handle,              \
+                          GCLP_HCURSOR,                          \
+                          ( LONG )( LONG_PTR )LoadCursor( NULL, b ) );       \
+        break;
+/* Nuke the cursor AND change it for this window class. */
+#       define ZAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( NULL );                                   \
+            SetClassLongPtr( fgStructure.Window->Window.Handle,              \
+                          GCLP_HCURSOR, ( LONG )( LONG_PTR )NULL );          \
+        break;
+#endif
 
     switch( cursorID )
     {
