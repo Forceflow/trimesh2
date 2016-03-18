@@ -1,6 +1,6 @@
 # TriMesh2
 
-**TriMesh2: ** C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes
+**TriMesh2:** C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes
 
 This is a fork of the trimesh2 library (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I'm staying close to the original, and adding my fixes for MSVC compilation.
 
