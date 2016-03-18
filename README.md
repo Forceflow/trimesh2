@@ -9,4 +9,5 @@ Notable changes/additions to vanilla trimesh2
  * MSVC project for Visual Studio 2013 professional
  * MSVC project for Visual Studio Community Edition 2015
  * Fixes for OpenMP compilation in VS 2015
+ * Fixes for FreeGlut / Gluit compilation in VS 2015
  * Added (experimental) 64-bit MSVC compilation support
