@@ -5,9 +5,8 @@
 ## Info
 Features: 
 
- * Support for reading PLY, OFF, 3DS, and Wavefront OBJ files, together with a few other formats of mostly local interest (SM, RAY).
- * Support for writing PLY, OFF, and OBJ files.
- * Vec: a templated C++ class for constant-length vectors, with support for the usual arithmetic operations (add, subtract, componentwise multiply and divide, dot product, cross product, etc.)
+ * Support for reading/writing PLY, OFF, OBJ files. Read-only: 3DS, SM, RAY.
+ * Vec: a templated C++ class for constant-length vectors, with support for the usual arithmetic operations
  * XForm: a class for rigid-body transformations.
  * An OpenGL trackball/arcball implementation, with automatic selection of rotation center.
  * Algorithms for subdivision, smoothing, curvature estimation, triangle stripping, and various other simple mesh manipulations.
@@ -21,7 +20,7 @@ The following utility programs are included:
  * mesh_cat: combine several meshes into a single file
  * mesh_align: align 2 meshes using ICP
  * mesh_shade: a few procedural shaders for adding per-vertex color
- * mesh_check: check for some kinds of topological oddities (e.g., more than 2 faces at an edge) in a mesh file. Removes parts of the  * mesh to "clean it up" and leave it a manifold.
+ * mesh_check: check for some kinds of topological oddities (e.g., more than 2 faces at an edge) in a mesh file.
  * mesh_crunch: quick-n-dirty mesh decimation using the Rossignac-Borrel method of vertex collapse
  * mesh_info: print out some information about a mesh
  * xf: create or compose transformations in .xf files
