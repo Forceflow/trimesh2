@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsrc", "libsrc\libsrc.vcxproj", "{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -9,6 +9,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsrc", "libsrc\libsrc.vcx
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gluit", "gluit\gluit.vcxproj", "{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_view", "mesh_view\mesh_view.vcxproj", "{593F8F27-3709-4D6A-9E38-3ADDA693D580}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5} = {FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +39,14 @@ Global
 		{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}.Release|Win32.Build.0 = Release|Win32
 		{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}.Release|x64.ActiveCfg = Release|x64
 		{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}.Release|x64.Build.0 = Release|x64
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Debug|Win32.ActiveCfg = Debug|Win32
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Debug|Win32.Build.0 = Debug|Win32
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Debug|x64.ActiveCfg = Debug|x64
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Debug|x64.Build.0 = Debug|x64
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|Win32.ActiveCfg = Release|Win32
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|Win32.Build.0 = Release|Win32
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|x64.ActiveCfg = Release|x64
+		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
