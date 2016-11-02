@@ -34,7 +34,7 @@ The following utility programs are included:
 
 ## Fork Details
 
-The original TriMesh2 project was very Linux/GCC-oriented, and only had limited Win32 support. The primary aim of this fork is to provide a stable MSVC solution. For several tools, TriMesh2 depends on a custom-cherrypicked freeglut version - dragging this kicking and screaming into the new century is also part of the challenge.
+The original TriMesh2 project was very Linux/GCC-oriented, and only had limited Win32 support. The primary aim of this fork is to provide a stable MSVC solution, for both x86 and x64 targets. For several tools, TriMesh2 depends on a custom-cherrypicked freeglut version - dragging this kicking and screaming into the new century is also part of the challenge.
 
 Notable changes/additions to vanilla trimesh2
  * Fixes for MSVC 12.0 / 14.0 compilation
