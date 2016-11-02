@@ -6,6 +6,12 @@ mesh_view.cc
 Simple viewer
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#define FREEGLUT_STATIC
+
 #include "TriMesh.h"
 #include "XForm.h"
 #include "GLCamera.h"
