@@ -241,3 +241,5 @@ ModelManifest.xml
 *.app
 /msvc/vs2015/trimesh2.VC.db
 *.opendb
+*.iobj
+*.ipdb
