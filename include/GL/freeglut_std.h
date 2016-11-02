@@ -58,6 +58,7 @@
 #    define FGAPIENTRY
 
         /* Link with Win32 static freeglut lib */
+		// (jeroen) Edit: When we're linking our tools, we want to link with our own gluit.lib
 //#       if defined(_MSC_VER)
 //#           pragma comment (lib, "freeglut_static.lib")
 //#       endif
