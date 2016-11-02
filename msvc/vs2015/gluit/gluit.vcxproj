@@ -67,11 +67,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>$(ProjectName)d</TargetName>
+    <TargetName>gluitd</TargetName>
     <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>$(ProjectName)d</TargetName>
+    <TargetName>gluitd</TargetName>
     <OutDir>..\..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
