@@ -2,9 +2,9 @@
 
 **TriMesh2:** C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes
 
-This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimesh2/) (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I like trimesh2 because of the low setup costs required to do model loading and manipulation. I'm staying close to the original, and adding my fixes for MSVC and 64-bit compilation. See further down for details.
+This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimesh2/) (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I like TriMesh2 because of the low setup costs required to do model loading and manipulation. I'm staying close to the original, and adding my fixes for MSVC and 64-bit compilation. See further down for details.
 
- * For the original Trimesh2 project, see [the Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
+ * For the original TriMesh2 project, see [the Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
  * Original MSVC 2012 project by Bengt Rosenberger.
  
 ## News
@@ -45,4 +45,4 @@ Notable changes/additions to vanilla trimesh2
  * Added (experimental) 64-bit MSVC compilation support
 
 Todo
- * Build trimesh2 tools (mesh_view, etc.) using MSVC project
+ * Build TriMesh2 tools (mesh_view, etc.) using MSVC project
