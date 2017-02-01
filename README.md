@@ -2,6 +2,8 @@
 
 **TriMesh2:** C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes
 
+![trimesh2 logo](https://raw.githubusercontent.com/Forceflow/trimesh2/master/html/trimesh_logo.jpg)
+
 This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimesh2/) (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I like TriMesh2 because of the low setup costs required to do model loading and manipulation. I'm staying close to the original, and adding my fixes for MSVC and 64-bit compilation. See further down for details.
 
  * For the original TriMesh2 project, see [the Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
