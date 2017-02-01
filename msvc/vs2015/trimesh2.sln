@@ -17,6 +17,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_view", "mesh_view\mesh
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_check", "mesh_check\mesh_check.vcxproj", "{96197215-C336-4817-A56B-26F45316495A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_align", "mesh_align\mesh_align.vcxproj", "{7505125B-55D8-492A-8734-8341CF65354E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -57,6 +59,14 @@ Global
 		{96197215-C336-4817-A56B-26F45316495A}.Release|Win32.Build.0 = Release|Win32
 		{96197215-C336-4817-A56B-26F45316495A}.Release|x64.ActiveCfg = Release|x64
 		{96197215-C336-4817-A56B-26F45316495A}.Release|x64.Build.0 = Release|x64
+		{7505125B-55D8-492A-8734-8341CF65354E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7505125B-55D8-492A-8734-8341CF65354E}.Debug|Win32.Build.0 = Debug|Win32
+		{7505125B-55D8-492A-8734-8341CF65354E}.Debug|x64.ActiveCfg = Debug|x64
+		{7505125B-55D8-492A-8734-8341CF65354E}.Debug|x64.Build.0 = Debug|x64
+		{7505125B-55D8-492A-8734-8341CF65354E}.Release|Win32.ActiveCfg = Release|Win32
+		{7505125B-55D8-492A-8734-8341CF65354E}.Release|Win32.Build.0 = Release|Win32
+		{7505125B-55D8-492A-8734-8341CF65354E}.Release|x64.ActiveCfg = Release|x64
+		{7505125B-55D8-492A-8734-8341CF65354E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
