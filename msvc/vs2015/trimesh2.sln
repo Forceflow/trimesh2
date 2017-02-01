@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsrc", "libsrc\libsrc.vcxproj", "{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_view", "mesh_view\mesh
 	ProjectSection(ProjectDependencies) = postProject
 		{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5} = {FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_check", "mesh_check\mesh_check.vcxproj", "{96197215-C336-4817-A56B-26F45316495A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +49,14 @@ Global
 		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|Win32.Build.0 = Release|Win32
 		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|x64.ActiveCfg = Release|x64
 		{593F8F27-3709-4D6A-9E38-3ADDA693D580}.Release|x64.Build.0 = Release|x64
+		{96197215-C336-4817-A56B-26F45316495A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{96197215-C336-4817-A56B-26F45316495A}.Debug|Win32.Build.0 = Debug|Win32
+		{96197215-C336-4817-A56B-26F45316495A}.Debug|x64.ActiveCfg = Debug|x64
+		{96197215-C336-4817-A56B-26F45316495A}.Debug|x64.Build.0 = Debug|x64
+		{96197215-C336-4817-A56B-26F45316495A}.Release|Win32.ActiveCfg = Release|Win32
+		{96197215-C336-4817-A56B-26F45316495A}.Release|Win32.Build.0 = Release|Win32
+		{96197215-C336-4817-A56B-26F45316495A}.Release|x64.ActiveCfg = Release|x64
+		{96197215-C336-4817-A56B-26F45316495A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
