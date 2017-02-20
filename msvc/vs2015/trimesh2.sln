@@ -19,6 +19,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_check", "mesh_check\me
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_align", "mesh_align\mesh_align.vcxproj", "{7505125B-55D8-492A-8734-8341CF65354E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_cat", "mesh_cat\mesh_cat.vcxproj", "{00AF901B-559C-44FF-B1E0-38AA3802DAC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -67,6 +69,14 @@ Global
 		{7505125B-55D8-492A-8734-8341CF65354E}.Release|Win32.Build.0 = Release|Win32
 		{7505125B-55D8-492A-8734-8341CF65354E}.Release|x64.ActiveCfg = Release|x64
 		{7505125B-55D8-492A-8734-8341CF65354E}.Release|x64.Build.0 = Release|x64
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Debug|Win32.Build.0 = Debug|Win32
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Debug|x64.ActiveCfg = Debug|x64
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Debug|x64.Build.0 = Debug|x64
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Release|Win32.ActiveCfg = Release|Win32
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Release|Win32.Build.0 = Release|Win32
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Release|x64.ActiveCfg = Release|x64
+		{00AF901B-559C-44FF-B1E0-38AA3802DAC7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
