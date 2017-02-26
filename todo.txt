@@ -1,4 +1,5 @@
 Add notice about OpenGL and mesh_view
+TravisCI implementation
 CPPCheck
 Build all utilities
 Interop with GLM vectors
