@@ -46,5 +46,4 @@ Notable changes/additions to vanilla trimesh2
  * Fixes for FreeGlut / Gluit compilation in VS 2015
  * Added (experimental) 64-bit MSVC compilation support
 
-Todo
- * Build TriMesh2 tools (mesh_view, etc.) using MSVC project
+For todo/planned features, see todo.txt.

@@ -1,0 +1,4 @@
+Add notice about OpenGL and mesh_view
+CPPCheck
+Build all utilities
+Interop with GLM vectors
