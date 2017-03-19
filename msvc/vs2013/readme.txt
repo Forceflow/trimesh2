@@ -1,0 +1,1 @@
+Note 2017/03/19 : MSVC 2013 projects are unmaintained - just here for you to build upon.
