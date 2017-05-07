@@ -1,5 +1,4 @@
-#ifndef VEC_H
-#define VEC_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -1063,6 +1062,3 @@ static inline trimesh::Vec<D,T> abs(const trimesh::Vec<D,T> &v)
 namespace std {
 	using ::abs;
 };
-
-
-#endif

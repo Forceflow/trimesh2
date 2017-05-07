@@ -1,5 +1,4 @@
-#ifndef GLCAMERA_H
-#define GLCAMERA_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -83,5 +82,3 @@ public:
 };
 
 }; // namespace trimesh
-
-#endif

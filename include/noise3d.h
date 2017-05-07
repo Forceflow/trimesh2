@@ -1,5 +1,4 @@
-#ifndef NOISE3D_H
-#define NOISE3D_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -14,7 +13,6 @@ A class for 3-D noise functions, including white noise and 1/f noise
 #include <cmath>
 #include <algorithm>
 #include <vector>
-
 
 namespace trimesh {
 
@@ -127,5 +125,3 @@ public:
 #undef MAGIC_SCALE
 
 }; // namespace trimesh
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef TRIMESH_H
-#define TRIMESH_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -16,7 +15,6 @@ Class for triangle meshes.
 #ifndef M_PIf
 # define M_PIf 3.1415927f
 #endif
-
 
 namespace trimesh {
 
@@ -251,5 +249,3 @@ public:
 };
 
 }; // namespace trimesh
-
-#endif

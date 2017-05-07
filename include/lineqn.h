@@ -1,5 +1,4 @@
-#ifndef LINEQN_H
-#define LINEQN_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -374,5 +373,3 @@ static inline void eigmult(T A[N][N],
 }
 
 }; // namespace trimesh
-
-#endif

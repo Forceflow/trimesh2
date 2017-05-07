@@ -1,5 +1,4 @@
-#ifndef XFORM_H
-#define XFORM_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -520,5 +519,3 @@ static inline ::std::string xfname(const ::std::string &filename)
 }
 
 }; // namespace trimesh
-
-#endif

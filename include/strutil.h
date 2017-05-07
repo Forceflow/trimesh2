@@ -1,5 +1,4 @@
-#ifndef STRUTIL_H
-#define STRUTIL_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -14,7 +13,6 @@ Usage:
 	ends_with("foobar", "baz") // false
 */
 
-
 #include <string>
 #include <cstring>
 
@@ -23,7 +21,6 @@ Usage:
 #  define strncasecmp _strnicmp
 # endif
 #endif
-
 
 namespace trimesh {
 
@@ -69,5 +66,3 @@ static inline bool ends_with(const ::std::string &s1, const ::std::string &s2)
 
 
 }; // namespace trimesh
-
-#endif

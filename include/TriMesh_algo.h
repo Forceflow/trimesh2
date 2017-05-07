@@ -1,5 +1,4 @@
-#ifndef TRIMESH_ALGO_H
-#define TRIMESH_ALGO_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -8,14 +7,12 @@ TriMesh_algo.h
 Various mesh-munging algorithms using TriMeshes
 */
 
-
 #include "TriMesh.h"
 #include "Vec.h"
 #include "Box.h"
 #include "XForm.h"
 #include "KDtree.h"
 #include <limits>
-
 
 namespace trimesh {
 
@@ -198,5 +195,3 @@ extern void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 extern void shared(TriMesh *mesh, float tol);
 
 }; // namespace trimesh
-
-#endif

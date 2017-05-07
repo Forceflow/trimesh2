@@ -1,5 +1,4 @@
-#ifndef BSPHERE_H
-#define BSPHERE_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -270,5 +269,3 @@ void Miniball<D,T>::build(bool pivoting /* = true */)
 //    CH-8092 Zuerich, Switzerland
 //    http://www.inf.ethz.ch/personal/gaertner
 //
-
-#endif

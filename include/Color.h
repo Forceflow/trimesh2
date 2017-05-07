@@ -1,5 +1,4 @@
-#ifndef COLOR_H
-#define COLOR_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -346,5 +345,3 @@ public:
 };
 
 }; // namespace trimesh
-
-#endif

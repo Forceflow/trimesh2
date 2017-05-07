@@ -1,5 +1,4 @@
-#ifndef KDTREE_H
-#define KDTREE_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -58,5 +57,3 @@ public:
 };
 
 }; // namespace trimesh
-
-#endif

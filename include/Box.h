@@ -1,5 +1,4 @@
-#ifndef BOX_H
-#define BOX_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -163,5 +162,3 @@ static inline ::std::string bboxname(const ::std::string &filename)
 }
 
 }; // namespace trimesh
-
-#endif

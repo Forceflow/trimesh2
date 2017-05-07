@@ -1,5 +1,4 @@
-#ifndef MEMPOOL_H
-#define MEMPOOL_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -88,5 +87,3 @@ public:
 };
 
 }; // namespace trimesh
-
-#endif
