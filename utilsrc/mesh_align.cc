@@ -13,7 +13,11 @@ for their alignment.
 #include "ICP.h"
 #include <cstdio>
 #include <cstdlib>
+#ifdef _MSC_VER
+#include <getopt.h>
+#else
 #include <unistd.h>
+#endif
 #include <vector>
 #include <string>
 using namespace std;
