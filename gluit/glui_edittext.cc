@@ -314,7 +314,9 @@ void    GLUI_EditText::disactivate( void )
     if ( text[0] == '\0' ) /* zero-length string - make it "0.0" */
       strcpy( text, "0.0" );
 
-    new_float_val = atof( text );
+	// atof actually converts string to double. BECAUSE REASONS. 
+	// correct C++11 way to fix this would be to use std::stof(text.string)
+    new_float_val = (float) atof( text ); 
 
     set_float_val( new_float_val );
   }
