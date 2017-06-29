@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Couldn't read file %s\n", argv[i]);
 			continue;
 		}
-		int onv = outmesh->vertices.size();
+		size_t onv = outmesh->vertices.size();
 		outmesh->vertices.insert(outmesh->vertices.end(),
 				         m->vertices.begin(),
 					 m->vertices.end());

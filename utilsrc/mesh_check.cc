@@ -65,7 +65,7 @@ bool bad_face(const TriMesh *themesh, int i)
 	const int &i0 = themesh->faces[i][0];
 	const int &i1 = themesh->faces[i][1];
 	const int &i2 = themesh->faces[i][2];
-	const int nv = themesh->vertices.size();
+	const size_t nv = themesh->vertices.size();
 
 	if ((i0 >= 0) && (i0 < nv) &&
 	    (i1 >= 0) && (i1 < nv) &&

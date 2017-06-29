@@ -41,7 +41,7 @@ public:
 
 
 // Are two faces connected along an edge (or vertex)?
-static bool connected(const TriMesh *mesh, int f1, int f2, bool conn_vert)
+static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
 {
 	int f10=mesh->faces[f1][0], f11=mesh->faces[f1][1], f12=mesh->faces[f1][2];
 	int f20=mesh->faces[f2][0], f21=mesh->faces[f2][1], f22=mesh->faces[f2][2];
@@ -129,7 +129,7 @@ void find_comps(TriMesh *mesh, vector<int> &comps, vector<int> &compsizes,
 		return;
 	mesh->need_adjacentfaces();
 
-	int nf = mesh->faces.size();
+	size_t nf = mesh->faces.size();
 	comps.clear();
 	comps.reserve(nf);
 	comps.resize(nf, NO_COMP);
