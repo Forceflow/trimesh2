@@ -156,7 +156,7 @@ private:
 		using namespace ::std;
 
 		if (x > 216.0f / 24389.0f)
-			return (float) cbrt(x);
+			return (float) std::cbrt(x);
 		else
 			return 4.0f / 29.0f + (841.0f / 108.0f) * x;
 	}
