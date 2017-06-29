@@ -1,18 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsrc", "libsrc\libsrc.vcxproj", "{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}"
-	ProjectSection(ProjectDependencies) = postProject
-		{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353} = {0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gluit", "gluit\gluit.vcxproj", "{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_view", "mesh_view\mesh_view.vcxproj", "{593F8F27-3709-4D6A-9E38-3ADDA693D580}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5} = {FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}
+		{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353} = {0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mesh_check", "mesh_check\mesh_check.vcxproj", "{96197215-C336-4817-A56B-26F45316495A}"
