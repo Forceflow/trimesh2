@@ -63,16 +63,16 @@ static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
 // Helper function for find_comps, below.  Finds and marks all the faces
 // connected to f.
 static void find_connected(const TriMesh *mesh,
-			   vector<int> &comps, vector<int> &compsizes,
+			   vector<size_t> &comps, vector<size_t> &compsizes,
 			   int f, int whichcomponent, bool conn_vert)
 {
-	stack<int> s;
+	stack<size_t> s;
 	s.push(f);
 	while (!s.empty()) {
-		int currface = s.top();
+		size_t currface = s.top();
 		s.pop();
 		for (int i = 0; i < 3; i++) {
-			int vert = mesh->faces[currface][i];
+			size_t vert = mesh->faces[currface][i];
 			FOR_EACH_ADJACENT_FACE(mesh, vert, adjface) {
 				if (comps[adjface] != NO_COMP ||
 				    !connected(mesh, adjface, currface, conn_vert))
@@ -89,22 +89,22 @@ static void find_connected(const TriMesh *mesh,
 // Helper function for find_comps, below.  Sorts the connected components
 // from largest to smallest.  Renumbers the elements of compsizes to
 // reflect this new numbering.
-static void sort_comps(vector<int> &comps, vector<int> &compsizes)
+static void sort_comps(vector<size_t> &comps, vector<size_t> &compsizes)
 {
-	vector<int> comp_pointers(compsizes.size());
+	vector<size_t> comp_pointers(compsizes.size());
 	for (size_t i = 0; i < comp_pointers.size(); i++)
 		comp_pointers[i] = i;
 
 	sort(comp_pointers.begin(), comp_pointers.end(),
-	     CompareArrayElements< vector<int> >(compsizes));
+	     CompareArrayElements< vector<size_t> >(compsizes));
 
-	vector<int> remap_table(comp_pointers.size());
+	vector<size_t> remap_table(comp_pointers.size());
 	for (size_t i = 0; i < comp_pointers.size(); i++)
 		remap_table[comp_pointers[i]] = i;
 	for (size_t i = 0; i < comps.size(); i++)
 		comps[i] = remap_table[comps[i]];
 
-	vector<int> newcompsizes(compsizes.size());
+	vector<size_t> newcompsizes(compsizes.size());
 	for (size_t i = 0; i < compsizes.size(); i++)
 		newcompsizes[i] = compsizes[comp_pointers[i]];
 	compsizes = newcompsizes;
@@ -119,7 +119,7 @@ static void sort_comps(vector<int> &comps, vector<int> &compsizes)
 //   associated connected component.
 //  compsizes holds the size of each connected component.
 // Connected components are sorted from largest to smallest.
-void find_comps(TriMesh *mesh, vector<int> &comps, vector<int> &compsizes,
+void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
 		bool conn_vert /* = false */)
 {
 	if (mesh->vertices.empty())
@@ -138,7 +138,7 @@ void find_comps(TriMesh *mesh, vector<int> &comps, vector<int> &compsizes,
 	for (int i = 0; i < nf; i++) {
 		if (comps[i] != NO_COMP)
 			continue;
-		int comp = compsizes.size();
+		size_t comp = compsizes.size();
 		comps[i] = comp;
 		compsizes.push_back(1);
 		find_connected(mesh, comps, compsizes, i, comp, conn_vert);
