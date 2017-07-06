@@ -20,7 +20,7 @@ void umbrella(TriMesh *mesh, float stepsize, bool tangent /* = false */)
 	mesh->need_adjacentfaces();
 	if (tangent)
 		mesh->need_normals();
-	int nv = mesh->vertices.size();
+	size_t nv = mesh->vertices.size();
 	std::vector<vec> disp(nv);
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
@@ -44,7 +44,7 @@ void umbrella(TriMesh *mesh, float stepsize, bool tangent /* = false */)
 			disp[i].clear();
 #endif
 		} else {
-			int nn = mesh->neighbors[i].size();
+			size_t nn = mesh->neighbors[i].size();
 			if (!nn)
 				continue;
 			for (int j = 0; j < nn; j++)

@@ -64,7 +64,7 @@ static bool connected(const TriMesh *mesh, size_t f1, size_t f2, bool conn_vert)
 // connected to f.
 static void find_connected(const TriMesh *mesh,
 			   vector<size_t> &comps, vector<size_t> &compsizes,
-			   int f, int whichcomponent, bool conn_vert)
+			   int f, size_t whichcomponent, bool conn_vert)
 {
 	stack<size_t> s;
 	s.push(f);
@@ -153,7 +153,7 @@ void find_comps(TriMesh *mesh, vector<size_t> &comps, vector<size_t> &compsizes,
 // the mesh.
 void select_comp(TriMesh *mesh, const vector<int> &comps, int whichcc)
 {
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] != whichcc)
@@ -173,12 +173,12 @@ void select_big_comps(TriMesh *mesh,
 		      int min_size,
 		      int total_largest /* = std::numeric_limits<int>::max() */)
 {
-	int ncomp = compsizes.size();
-	int keep_last = min(ncomp - 1, total_largest - 1);
+	size_t ncomp = compsizes.size();
+	size_t keep_last = min(ncomp - 1, (size_t) total_largest - 1);
 	while (keep_last > -1 && compsizes[keep_last] < min_size)
 		keep_last--;
 
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] > keep_last)
@@ -197,12 +197,12 @@ void select_small_comps(TriMesh *mesh,
 			int max_size,
 			int total_smallest /* = std::numeric_limits<int>::max() */)
 {
-	int ncomp = compsizes.size();
-	int keep_first = max(0, ncomp - total_smallest);
+	size_t ncomp = compsizes.size();
+	size_t keep_first = max((size_t) 0, (size_t) ncomp - total_smallest);
 	while (keep_first < ncomp && compsizes[keep_first] > max_size)
 		keep_first++;
 
-	int numfaces = mesh->faces.size();
+	size_t numfaces = mesh->faces.size();
 	vector<bool> toremove(numfaces, false);
 	for (int i = 0; i < numfaces; i++) {
 		if (comps[i] < keep_first)
