@@ -31,17 +31,17 @@ Features:
 
 The following utility programs are included:
 
- * **mesh_view**: a simple 3D mesh viewer
- * **mesh_make**: create arbitrarily-tessellated meshes of various simple shapes
- * **mesh_filter**: applies a variety of simple transformations to a mesh, such as converting formats, flipping faces, subdivision, smoothing, rigid-body transformations, etc.
- * **mesh_cc**: list and/or extract connected components from a mesh
- * **mesh_cat**: combine several meshes into a single file
- * **mesh_align**: align 2 meshes using ICP
- * **mesh_shade**: a few procedural shaders for adding per-vertex color
- * **mesh_check**: check for some kinds of topological oddities (e.g., more than 2 faces at an edge) in a mesh file.
- * **mesh_crunch**: quick-n-dirty mesh decimation using the Rossignac-Borrel method of vertex collapse
- * **mesh_info**: print out some information about a mesh
- * **xf**: create or compose transformations in .xf files
+ * **mesh_view**: A simple 3D mesh viewer
+ * **mesh_make**: Create arbitrarily-tessellated meshes of various simple shapes
+ * **mesh_filter**: Applies a variety of simple transformations to a mesh, such as converting formats, flipping faces, subdivision, smoothing, rigid-body transformations, etc.
+ * **mesh_cc**: List and/or extract connected components from a mesh
+ * **mesh_cat**: Combine several meshes into a single file
+ * **mesh_align**: Align 2 meshes using ICP
+ * **mesh_shade**: A few procedural shaders for adding per-vertex color
+ * **mesh_check**: Check for some kinds of topological oddities (e.g., more than 2 faces at an edge) in a mesh file.
+ * **mesh_crunch**: Quick-n-dirty mesh decimation using the Rossignac-Borrel method of vertex collapse
+ * **mesh_info**: Print out some information about a mesh
+ * **xf**: Create or compose transformations in .xf files
 
 ## Fork Details
 
