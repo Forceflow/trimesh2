@@ -10,6 +10,7 @@ Routines for doing ICP.
 #include "TriMesh.h"
 #include "XForm.h"
 #include "KDtree.h"
+#include "timestamp.h"
 
 
 namespace trimesh {
