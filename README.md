@@ -7,14 +7,11 @@ A C++ library and set of utilities for input, output, and basic manipulation of 
 This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimesh2/) (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I like TriMesh2 because of the low setup costs required to do model loading and manipulation, as well as the robust and powerful implementation of model manipulation.
  
 ## Getting started
- * Download a prebuilt release of trimesh2 (coming soon!) or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
+ * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
    * For **Windows**, Visual Studio CE 2015 and 2017 solutions are in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
    * For **Linux**, a makefile is provided
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
  * For inspiration on how to use the library, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`
- 
-## News
- * mesh_view tool now builds in Win64 without external dependencies!
 
 ## Info
 Legacy:
