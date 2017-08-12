@@ -1,5 +1,4 @@
-#ifndef TIMESTAMP_H
-#define TIMESTAMP_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -79,8 +78,5 @@ Wrapper around system-specific timestamps.
   }
 
   }; // namespace trimesh
-
-#endif
-
 
 #endif
