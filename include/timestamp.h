@@ -1,5 +1,4 @@
-#ifndef TIMESTAMP_H
-#define TIMESTAMP_H
+#pragma once
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -59,7 +58,7 @@ Wrapper around system-specific timestamps.
 #else
 
  #include <sys/time.h>
- #include <unistd.h>
+// #include <unistd.h>
 
   namespace trimesh {
 
@@ -79,8 +78,5 @@ Wrapper around system-specific timestamps.
   }
 
   }; // namespace trimesh
-
-#endif
-
 
 #endif

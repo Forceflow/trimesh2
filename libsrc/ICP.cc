@@ -10,7 +10,6 @@ Routines for doing ICP.
 #include <algorithm>
 #include "ICP.h"
 #include "KDtree.h"
-#include "timestamp.h"
 #include "lineqn.h"
 using namespace std;
 
