@@ -30,7 +30,7 @@ void shared(TriMesh *mesh, float tol)
 
 	// We only merge vertices on different connected components.
 	// First we find those components.
-	vector<int> comps, compsizes;
+	vector<size_t> comps, compsizes;
 	find_comps(mesh, comps, compsizes, true);
 
 	// Find boundary vertices

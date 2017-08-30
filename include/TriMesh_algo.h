@@ -156,8 +156,8 @@ extern void noisify(TriMesh *mesh, float amount);
 //   associated connected component.
 //  compsizes holds the size of each connected component.
 // Connected components are sorted from largest to smallest.
-extern void find_comps(TriMesh *mesh, ::std::vector<int> &comps,
-	::std::vector<int> &compsizes, bool conn_vert = false);
+extern void find_comps(TriMesh *mesh, ::std::vector<size_t> &comps,
+	::std::vector<size_t> &compsizes, bool conn_vert = false);
 
 // Select a particular connected component, and delete all other vertices from
 // the mesh.
