@@ -161,19 +161,19 @@ extern void find_comps(TriMesh *mesh, ::std::vector<size_t> &comps,
 
 // Select a particular connected component, and delete all other vertices from
 // the mesh.
-extern void select_comp(TriMesh *mesh, const ::std::vector<int> &comps,
+extern void select_comp(TriMesh *mesh, const ::std::vector<size_t> &comps,
 	int whichcc);
 
 // Select the connected components no smaller than min_size (but no more than
 // total_largest components), and delete all other vertices from the mesh.
-extern void select_big_comps(TriMesh *mesh, const ::std::vector<int> &comps,
-	const ::std::vector<int> &compsizes, int min_size,
+extern void select_big_comps(TriMesh *mesh, const ::std::vector<size_t> &comps,
+	const ::std::vector<size_t> &compsizes, int min_size,
 	int total_largest = ::std::numeric_limits<int>::max());
 
 // Select the connected components no bigger than max_size (but no more than
 // total_smallest components), and delete all other vertices from the mesh.
-extern void select_small_comps(TriMesh *mesh, const ::std::vector<int> &comps,
-	const ::std::vector<int> &compsizes, int max_size,
+extern void select_small_comps(TriMesh *mesh, const ::std::vector<size_t> &comps,
+	const ::std::vector<size_t> &compsizes, int max_size,
 	int total_smallest = ::std::numeric_limits<int>::max());
 
 // Find overlap area and RMS distance between mesh1 and mesh2.
