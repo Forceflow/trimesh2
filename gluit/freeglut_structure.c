@@ -28,6 +28,11 @@
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 /* -- GLOBAL EXPORTS ------------------------------------------------------- */
 
 /*
