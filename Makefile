@@ -1,3 +1,6 @@
+libonly:
+	$(MAKE) -C libsrc
+
 all win32 linux32 linux64 darwin32 darwin64 clean:
 	$(MAKE) -C libsrc $@
 	$(MAKE) -C gluit $@
