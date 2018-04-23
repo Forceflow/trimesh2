@@ -146,7 +146,7 @@ void TriMesh::need_curvatures()
 	dprintf("Computing curvatures... ");
 
 	// Resize the arrays we'll be using
-	int nv = vertices.size(), nf = faces.size();
+	size_t nv = vertices.size(), nf = faces.size();
 	curv1.clear(); curv1.resize(nv); curv2.clear(); curv2.resize(nv);
 	pdir1.clear(); pdir1.resize(nv); pdir2.clear(); pdir2.resize(nv);
 	vector<float> curv12(nv);
@@ -251,7 +251,7 @@ void TriMesh::need_dcurv()
 	dprintf("Computing dcurv... ");
 
 	// Resize the arrays we'll be using
-	int nv = vertices.size(), nf = faces.size();
+	size_t nv = vertices.size(), nf = faces.size();
 	dcurv.clear(); dcurv.resize(nv);
 
 	// Compute dcurv per-face

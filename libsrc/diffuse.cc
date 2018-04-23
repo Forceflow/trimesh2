@@ -128,8 +128,8 @@ void smooth_mesh(TriMesh *themesh, float sigma)
 {
 	themesh->need_faces();
 	diffuse_normals(themesh, 0.5f * sigma);
-	int nv = themesh->vertices.size();
-	int nf = themesh->faces.size();
+	size_t nv = themesh->vertices.size();
+	size_t nf = themesh->faces.size();
 
 	dprintf("\rSmoothing... ");
 	timestamp t = now();
@@ -258,7 +258,7 @@ void bilateral_smooth_mesh(TriMesh *themesh, float sigma1, float sigma2)
 	themesh->need_faces();
 	themesh->need_adjacentfaces();
 	themesh->need_across_edge();
-	int nv = themesh->vertices.size(), nf = themesh->faces.size();
+	size_t nv = themesh->vertices.size(), nf = themesh->faces.size();
 
 	dprintf("\rSmoothing... ");
 	timestamp t = now();
@@ -299,7 +299,7 @@ void diffuse_vector(TriMesh *themesh, std::vector<T> &field, float sigma)
 	themesh->need_normals();
 	themesh->need_pointareas();
 	themesh->need_neighbors();
-	int nv = themesh->vertices.size();
+	size_t nv = themesh->vertices.size();
 
 	dprintf("\rSmoothing vector field... ");
 	timestamp t = now();
@@ -332,7 +332,7 @@ void diffuse_normals(TriMesh *themesh, float sigma)
 	themesh->need_normals();
 	themesh->need_pointareas();
 	themesh->need_neighbors();
-	int nv = themesh->vertices.size();
+	size_t nv = themesh->vertices.size();
 
 	dprintf("\rSmoothing normals... ");
 	timestamp t = now();
@@ -368,7 +368,7 @@ void diffuse_curv(TriMesh *themesh, float sigma)
 	themesh->need_pointareas();
 	themesh->need_curvatures();
 	themesh->need_neighbors();
-	int nv = themesh->vertices.size();
+	size_t nv = themesh->vertices.size();
 
 	dprintf("\rSmoothing curvatures... ");
 	timestamp t = now();
@@ -408,7 +408,7 @@ void diffuse_dcurv(TriMesh *themesh, float sigma)
 	themesh->need_curvatures();
 	themesh->need_dcurv();
 	themesh->need_neighbors();
-	int nv = themesh->vertices.size();
+	size_t nv = themesh->vertices.size();
 
 	dprintf("\rSmoothing curvature derivatives... ");
 	timestamp t = now();
