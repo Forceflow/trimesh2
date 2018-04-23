@@ -173,7 +173,7 @@ extern void select_big_comps(TriMesh *mesh, const ::std::vector<size_t> &comps,
 // Select the connected components no bigger than max_size (but no more than
 // total_smallest components), and delete all other vertices from the mesh.
 extern void select_small_comps(TriMesh *mesh, const ::std::vector<size_t> &comps,
-	const ::std::vector<size_t> &compsizes, int max_size,
+	const ::std::vector<size_t> &compsizes, size_t max_size,
 	int total_smallest = ::std::numeric_limits<int>::max());
 
 // Find overlap area and RMS distance between mesh1 and mesh2.
