@@ -1,9 +1,9 @@
-#DEBUG = y
-MAKERULESDIR = ..
 DESTDIR = ../lib.$(UNAME)
 INCLUDES = -I../include -I../include/GL
 
-include $(MAKERULESDIR)/Makerules
+include ../Makerules
+
+COPTS += -Wno-unused-parameter -Wno-shadow
 
 ifdef DONT_BUILD_FREEGLUT
 CFILES =
@@ -18,18 +18,21 @@ CFILES =	freeglut_callbacks.c \
 		freeglut_geometry.c \
 		freeglut_glutfont_definitions.c \
 		freeglut_init.c \
+		freeglut_input_devices.c \
 		freeglut_joystick.c \
 		freeglut_main.c \
 		freeglut_menu.c \
 		freeglut_misc.c \
 		freeglut_overlay.c \
+		freeglut_spaceball.c \
 		freeglut_state.c \
 		freeglut_stroke_mono_roman.c \
 		freeglut_stroke_roman.c \
 		freeglut_structure.c \
 		freeglut_teapot.c \
 		freeglut_videoresize.c \
-		freeglut_window.c
+		freeglut_window.c \
+		freeglut_xinput.c
 endif
 
 CCFILES =	glui.cc \
@@ -65,8 +68,7 @@ $(LIB): $(OFILES)
 	$(STATICLIB)
 
 clean:
-	-rm -f $(OFILES) $(OBJDIR)/Makedepend $(OBJDIR)/*.d
-	-rm -rf $(OBJDIR)/ii_files
+	-rm -f $(OBJDIR)/*.o $(OBJDIR)/*.d
 	-rmdir $(OBJDIR)
 
 spotless: clean

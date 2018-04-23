@@ -90,6 +90,7 @@ void usage(const char *myname)
 	fprintf(stderr, "	-tstrip		Convert to use triangle strips\n");
 	fprintf(stderr, "	-notstrip	Unpack triangle strips to faces\n");
 	fprintf(stderr, "	-nogrid		Unpack range grid to faces\n");
+	fprintf(stderr, "	-nofaces	Delete all tris/tstrips/grid\n");
 	fprintf(stderr, "	-reorder	Optimize order of vertices\n");
 	fprintf(stderr, "	-orient		Auto-orient faces within the mesh\n");
 	fprintf(stderr, "	-faceflip	Flip the order of vertices within each face\n");
@@ -104,6 +105,7 @@ void usage(const char *myname)
 	fprintf(stderr, "	-usmooth n	Perform n iterations of simple umbrella smoothing\n");
 	fprintf(stderr, "	-tsmooth n	Perform n iterations of tangent-plane umbrella smoothing\n");
 	fprintf(stderr, "	-lmsmooth n	Perform n iterations of Taubin's lambda-mu smoothing\n");
+	fprintf(stderr, "	-nsmooth n	Perform n iterations of umbrella smoothing on the normals\n");
 	fprintf(stderr, "	-inflate s	Create offset surface s*edgelength away\n");
 	fprintf(stderr, "	-noisify s	Add O(s*edgelength) noise to each vertex\n");
 	fprintf(stderr, "	-share tol	Merge (\"share\") vertices within tol*edgelength\n");
@@ -146,7 +148,7 @@ int main(int argc, char *argv[])
 				themesh->colors.resize(nv, Color::white());
 			}
 		} else if (!strcmp(argv[i], "-nocolor") ||
-			   !strcmp(argv[i], "-nocolors")) {
+		           !strcmp(argv[i], "-nocolors")) {
 			themesh->colors.clear();
 		} else if (!strcmp(argv[i], "-conf")) {
 			if (isanumber(argv[i+1])) {
@@ -162,21 +164,25 @@ int main(int argc, char *argv[])
 		} else if (!strcmp(argv[i], "-noconf")) {
 			themesh->confidences.clear();
 		} else if (!strcmp(argv[i], "-tstrip") ||
-			   !strcmp(argv[i], "-tstrips") ||
-			   !strcmp(argv[i], "-strip") ||
-			   !strcmp(argv[i], "-strips")) {
+		           !strcmp(argv[i], "-tstrips") ||
+		           !strcmp(argv[i], "-strip") ||
+		           !strcmp(argv[i], "-strips")) {
 			themesh->need_tstrips();
 			have_tstrips = true;
 		} else if (!strcmp(argv[i], "-notstrip") ||
-			   !strcmp(argv[i], "-notstrips") ||
-			   !strcmp(argv[i], "-nostrip") ||
-			   !strcmp(argv[i], "-nostrips") ||
-			   !strcmp(argv[i], "-unstrip")) {
+		           !strcmp(argv[i], "-notstrips") ||
+		           !strcmp(argv[i], "-nostrip") ||
+		           !strcmp(argv[i], "-nostrips") ||
+		           !strcmp(argv[i], "-unstrip")) {
 			themesh->need_faces();
 			themesh->tstrips.clear();
 			have_tstrips = false;
 		} else if (!strcmp(argv[i], "-nogrid")) {
 			themesh->need_faces();
+			themesh->grid.clear();
+		} else if (!strcmp(argv[i], "-nofaces")) {
+			themesh->faces.clear();
+			themesh->tstrips.clear();
 			themesh->grid.clear();
 		} else if (!strcmp(argv[i], "-reorder")) {
 			reorder_verts(themesh);
@@ -272,6 +278,15 @@ int main(int argc, char *argv[])
 			}
 			int niters = atoi(argv[i]);
 			lmsmooth(themesh, niters);
+		} else if (!strcmp(argv[i], "-nsmooth")) {
+			i++;
+			if (!(i < argc && isanint(argv[i]))) {
+				fprintf(stderr, "\n-nsmooth requires one int parameter: n\n\n");
+				usage(argv[0]);
+			}
+			int niters = atoi(argv[i]);
+			for (int iter = 0; iter < niters; iter++)
+				numbrella(themesh, 0.5f);
 		} else if (!strcmp(argv[i], "-inflate")) {
 			i++;
 			if (!(i < argc && isanumber(argv[i]))) {
@@ -305,7 +320,7 @@ int main(int argc, char *argv[])
 			if (!clip(themesh, argv[i]))
 				usage(argv[0]);
 		} else if (!strcmp(argv[i], "-xf") ||
-			   !strcmp(argv[i], "-xform")) {
+		           !strcmp(argv[i], "-xform")) {
 			i++;
 			if (!(i < argc)) {
 				fprintf(stderr, "\n-xform requires one argument\n\n");
@@ -313,7 +328,7 @@ int main(int argc, char *argv[])
 			}
 			apply_xform(themesh, argv[i]);
 		} else if (!strcmp(argv[i], "-ixf") ||
-			   !strcmp(argv[i], "-ixform")) {
+		           !strcmp(argv[i], "-ixform")) {
 			i++;
 			if (!(i < argc)) {
 				fprintf(stderr, "\n-ixform requires one argument\n\n");
@@ -321,7 +336,7 @@ int main(int argc, char *argv[])
 			}
 			apply_ixform(themesh, argv[i]);
 		} else if (!strcmp(argv[i], "-rot") ||
-			   !strcmp(argv[i], "-rotate")) {
+		           !strcmp(argv[i], "-rotate")) {
 			i += 4;
 			if (!(i < argc &&
 			      isanumber(argv[i]) && isanumber(argv[i-1]) &&
@@ -330,10 +345,10 @@ int main(int argc, char *argv[])
 				usage(argv[0]);
 			}
 			vec ax(ATOF(argv[i-2]), ATOF(argv[i-1]), ATOF(argv[i]));
-			float ang = M_PIf / 180.0f * ATOF(argv[i-3]);
+			float ang = radians(ATOF(argv[i-3]));
 			rot(themesh, ang, ax);
 		} else if (!strcmp(argv[i], "-trans") ||
-			   !strcmp(argv[i], "-translate")) {
+		           !strcmp(argv[i], "-translate")) {
 			i += 3;
 			if (!(i < argc && isanumber(argv[i]) &&
 			      isanumber(argv[i-1]) && isanumber(argv[i-2]))) {
@@ -391,7 +406,7 @@ int main(int argc, char *argv[])
 		} else if (!strcmp(argv[i], "-erode")) {
 			erode(themesh);
 		} else if (i == argc - 1 &&
-			   (argv[i][0] != '-' || argv[i][1] == '\0')) {
+		           (argv[i][0] != '-' || argv[i][1] == '\0')) {
 			if (have_tstrips && themesh->tstrips.empty())
 				themesh->need_tstrips();
 			themesh->write(argv[i]);
@@ -401,4 +416,3 @@ int main(int argc, char *argv[])
 		}
 	}
 }
-

@@ -7,7 +7,6 @@ Computation of various statistics on the mesh.
 */
 
 #include "TriMesh.h"
-#include <algorithm>
 #include <numeric>
 using namespace std;
 
@@ -61,7 +60,7 @@ float TriMesh::stat(StatOp op, StatVal val)
 				for (int j = 0; j < 3; j++)
 					vals.push_back(dist(
 						vertices[faces[i][j]],
-						vertices[faces[i][(j+1)%3]]));
+						vertices[faces[i][NEXT_MOD3(j)]]));
 			break;
 		}
 		case STAT_X: {
@@ -90,41 +89,65 @@ float TriMesh::stat(StatOp op, StatVal val)
 	if (!n)
 		return 0.0f;
 
+	// Take absolute value or square
 	switch (op) {
-		case STAT_MIN:
-			return *min_element(vals.begin(), vals.end());
-
-		case STAT_MAX:
-			return *max_element(vals.begin(), vals.end());
-
+		case STAT_MINABS:
+		case STAT_MAXABS:
+		case STAT_SUMABS:
 		case STAT_MEANABS:
-			for (int i = 0; i < n; i++)
+			for (int i = 0; i < n; i++) {
 				if (vals[i] < 0.0f)
 					vals[i] = -vals[i];
-			// Fall through
-		case STAT_MEAN:
-			return accumulate(vals.begin(), vals.end(), 0.0f) / n;
+			}
+			break;
 
+		case STAT_SUMSQR:
 		case STAT_RMS:
 			for (int i = 0; i < n; i++)
 				vals[i] *= vals[i];
+			break;
+
+		default:
+			break;
+	}
+
+	// Now do the computation
+	switch (op) {
+		case STAT_MIN:
+		case STAT_MINABS:
+			return *min_element(vals.begin(), vals.end());
+
+		case STAT_MAX:
+		case STAT_MAXABS:
+			return *max_element(vals.begin(), vals.end());
+
+		case STAT_SUM:
+		case STAT_SUMABS:
+		case STAT_SUMSQR:
+			return accumulate(vals.begin(), vals.end(), 0.0f);
+
+		case STAT_MEAN:
+		case STAT_MEANABS:
+			return accumulate(vals.begin(), vals.end(), 0.0f) / n;
+
+		case STAT_RMS:
 			return sqrt(accumulate(vals.begin(), vals.end(), 0.0f)
 				/ n);
 
 		case STAT_MEDIAN:
 			if (n & 1) {
 				nth_element(vals.begin(),
-					    vals.begin() + n/2,
-					    vals.end());
+				            vals.begin() + n/2,
+				            vals.end());
 				return vals[n/2];
 			} else {
 				nth_element(vals.begin(),
-					    vals.begin() + n/2 - 1,
-					    vals.end());
+				            vals.begin() + n/2 - 1,
+				            vals.end());
 				float tmp = vals[n/2 - 1];
 				nth_element(vals.begin(),
-					    vals.begin() + n/2,
-					    vals.end());
+				            vals.begin() + n/2,
+				            vals.end());
 				return 0.5f * (tmp + vals[n/2]);
 			}
 
@@ -137,16 +160,14 @@ float TriMesh::stat(StatOp op, StatVal val)
 				/ n);
 		}
 
-		case STAT_TOTAL:
-			return accumulate(vals.begin(), vals.end(), 0.0f);
+		default:
+			return 0.0f; // Can't happen, I hope.
 	}
-
-	return 0.0f; // Can't happen, I hope.
 }
 
 
-// A characteristic "feature size" for the mesh.  Computed as an approximation
-// to the median edge length
+// Fast computation of a characteristic "feature size" for the mesh.
+// Computed as an approximation to the median edge length.
 float TriMesh::feature_size()
 {
 	need_faces();
@@ -159,12 +180,12 @@ float TriMesh::feature_size()
 	vector<float> samples;
 	samples.reserve(nsamp * 3);
 
-	for (int i = 0; i < nsamp; i++) {
-		// Quick 'n dirty portable random number generator
-		static unsigned randq = 0;
-		randq = unsigned(1664525) * randq + unsigned(1013904223);
+	// We want to return consistent results, even though we're sampling,
+	// so reset the RNG
+	xorshift_rnd(0);
 
-		int ind = randq % nf;
+	for (int i = 0; i < nsamp; i++) {
+		int ind = uniform_rnd(nf);
 		const point &p0 = vertices[faces[ind][0]];
 		const point &p1 = vertices[faces[ind][1]];
 		const point &p2 = vertices[faces[ind][2]];
@@ -173,9 +194,9 @@ float TriMesh::feature_size()
 		samples.push_back(dist2(p2,p0));
 	}
 	nth_element(samples.begin(),
-		    samples.begin() + samples.size()/2,
-		    samples.end());
+	            samples.begin() + samples.size()/2,
+	            samples.end());
 	return sqrt(samples[samples.size()/2]);
 }
 
-}; // namespace trimesh
+} // namespace trimesh

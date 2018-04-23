@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BOX_H
+#define BOX_H
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -9,62 +10,84 @@ Templated axis-aligned bounding boxes - meant to be used with Vec.h
 
 #include "Vec.h"
 #include "strutil.h"
-#include <iostream>
+#include <iomanip>
 #include <fstream>
+
+
+#define inline TRIMESH_INLINE
 
 
 namespace trimesh {
 
 template <size_t D, class T = float>
 class Box {
-private:
-	typedef Vec<D,T> Point;
-
 public:
-	Point min, max;
+	// Types
+	typedef T value_type;
+	typedef value_type *pointer;
+	typedef const value_type *const_pointer;
+	typedef value_type &reference;
+	typedef const value_type &const_reference;
+	typedef Vec<D,T> point_type;
+	typedef typename Vec<D,T>::float_type float_type;
+
+	// Public (!) members
+	point_type min, max;
 	bool valid;
 
 	// Construct as empty
-	Box() : valid(false)
+	inline Box() : valid(false)
 		{}
 
 	// Construct from a single point
-	Box(const Point &p) : min(p), max(p), valid(true)
+	inline Box(const point_type &p) : min(p), max(p), valid(true)
 		{}
 
+	// Construct from two points
+	inline Box(const point_type &p1, const point_type &p2)
+		: min(p1), max(p2), valid(true)
+	{
+		using namespace ::std;
+		for (size_t i = 0; i < D; i++) {
+			if (min[i] > max[i])
+				swap(min[i], max[i]);
+		}
+	}
+
 	// Mark invalid
-	void clear()
+	inline void clear()
 		{ valid = false; }
 
 	// Return center point, (vector) diagonal, and (scalar) radius
-	Point center() const
+	inline point_type center() const
 	{
-		if (valid)
-			return T(0.5) * (min+max);
-		else
-			return Vec<D,T>();
+		if (unlikely(!valid))
+			return point_type();
+		return float_type(0.5) * (min + max);
 	}
-	Point size() const
+	inline point_type size() const
 	{
-		if (valid)
-			return max - min;
-		else
-			return Vec<D,T>();
+		if (unlikely(!valid))
+			return point_type();
+		return max - min;
 	}
-	T radius() const
+	inline float_type radius() const
 	{
-		if (valid)
-			return T(0.5) * dist(min, max);
-		else
-			return T(0);
+		if (unlikely(!valid))
+			return 0;
+		return float_type(0.5) * dist(min, max);
 	}
 
-	// Grow a bounding box to encompass a point
-	Box<D,T> &operator += (const Point &p)
+	// Grow a bounding box to encompass a point or another Box
+	inline Box<D,T> &operator += (const point_type &p)
 	{
-		if (valid) {
-			min.min(p);
-			max.max(p);
+		if (likely(valid)) {
+			for (size_t i = 0; i < D; i++) {
+				if (p[i] < min[i])
+					min[i] = p[i];
+				else if (p[i] > max[i])
+					max[i] = p[i];
+			}
 		} else {
 			min = p;
 			max = p;
@@ -72,11 +95,15 @@ public:
 		}
 		return *this;
 	}
-	Box<D,T> &operator += (const Box<D,T> &b)
+	inline Box<D,T> &operator += (const Box<D,T> &b)
 	{
-		if (valid) {
-			min.min(b.min);
-			max.max(b.max);
+		if (likely(valid)) {
+			for (size_t i = 0; i < D; i++) {
+				if (b.min[i] < min[i])
+					min[i] = b.min[i];
+				if (b.max[i] > max[i])
+					max[i] = b.max[i];
+			}
 		} else {
 			min = b.min;
 			max = b.max;
@@ -85,15 +112,51 @@ public:
 		return *this;
 	}
 
-	friend const Box<D,T> operator + (const Box<D,T> &b, const Point &p)
-		{ return Box<D,T>(b) += p; }
-	friend const Box<D,T> operator + (const Point &p, const Box<D,T> &b)
-		{ return Box<D,T>(b) += p; }
-	friend const Box<D,T> operator + (const Box<D,T> &b1, const Box<D,T> &b2)
-		{ return Box<D,T>(b1) += b2; }
+	inline friend const Box operator + (const Box &b, const point_type &p)
+		{ return Box(b) += p; }
+	inline friend const Box operator + (const point_type &p, const Box &b)
+		{ return Box(b) += p; }
+	inline friend const Box operator + (const Box &b1, const Box &b2)
+		{ return Box(b1) += b2; }
 
-	// Read a Box from a file.
-	bool read(const ::std::string &filename)
+	// Does a Box contain, or at least touch, a point?
+	inline bool contains(const point_type &p) const
+	{
+		if (unlikely(!valid))
+			return false;
+		for (size_t i = 0; i < D; i++) {
+			if (p[i] < min[i] || p[i] > max[i])
+				return false;
+		}
+		return true;
+	}
+
+	// Does a Box contain another Box?
+	inline bool contains(const Box &b) const
+	{
+		if (unlikely(!valid || !b.valid))
+			return false;
+		for (size_t i = 0; i < D; i++) {
+			if (b.min[i] < min[i] || b.max[i] > max[i])
+				return false;
+		}
+		return true;
+	}
+
+	// Do two Boxes intersect, or at least touch?
+	inline bool intersects(const Box &b)
+	{
+		if (unlikely(!valid || !b.valid))
+			return false;
+		for (size_t i = 0; i < D; i++) {
+			if (b.max[i] < min[i] || b.min[i] > max[i])
+				return false;
+		}
+		return true;
+	}
+
+	// Read a Box from a file
+	inline bool read(const ::std::string &filename)
 	{
 		using namespace ::std;
 		fstream f(filename.c_str());
@@ -108,29 +171,28 @@ public:
 	}
 
 	// Write a Box to a file
-	bool write(const ::std::string &filename) const
+	inline bool write(const ::std::string &filename) const
 	{
 		using namespace ::std;
+		const int digits = 2 + numeric_limits<T>::digits10;
 		ofstream f(filename.c_str());
-		f << *this;
+		f << setprecision(digits) << *this;
 		f.close();
 		return f.good();
 	}
 
 	// iostream operators
-	friend ::std::ostream &operator << (::std::ostream &os, const Box<D,T> &b)
+	inline friend ::std::ostream &operator << (::std::ostream &os, const Box &b)
 	{
 		using namespace ::std;
 		const size_t n = b.min.size();
-		for (size_t i = 0; i < n-1; i++)
-			os << b.min[i] << " ";
-		os << b.min[n-1] << endl;
-		for (size_t i = 0; i < n-1; i++)
-			os << b.max[i] << " ";
-		os << b.max[n-1] << endl;
+		for (size_t i = 0; i < n; i++)
+			os << b.min[i] << (i == n-1 ? "\n" : " ");
+		for (size_t i = 0; i < n; i++)
+			os << b.max[i] << (i == n-1 ? "\n" : " ");
 		return os;
 	}
-	friend ::std::istream &operator >> (::std::istream &is, Box<D,T> &b)
+	inline friend ::std::istream &operator >> (::std::istream &is, Box &b)
 	{
 		using namespace ::std;
 		const size_t n = b.min.size();
@@ -144,15 +206,41 @@ public:
 		b.valid = is.good();
 		return is;
 	}
-};
+}; // class Box
 
-typedef Box<3,float> box;
-typedef Box<2,float> box2;
-typedef Box<3,float> box3;
-typedef Box<4,float> box4;
-typedef Box<2,int> ibox2;
-typedef Box<3,int> ibox3;
-typedef Box<4,int> ibox4;
+
+typedef Box<3,float>    box;
+typedef Box<2,float>   box2;
+typedef Box<3,float>   box3;
+typedef Box<4,float>   box4;
+typedef Box<2,int>    ibox2;
+typedef Box<3,int>    ibox3;
+typedef Box<4,int>    ibox4;
+typedef Box<2,double> dbox2;
+typedef Box<3,double> dbox3;
+typedef Box<4,double> dbox4;
+
+
+// Equality and inequality.  An invalid box compares unequal to anything.
+template <size_t D, class T>
+static inline bool operator == (const Box<D,T> &b1, const Box<D,T> &b2)
+{
+	return b1.valid && b2.valid && b1.min == b2.min && b1.max == b2.max;
+}
+
+template <size_t D, class T>
+static inline bool operator != (const Box<D,T> &b1, const Box<D,T> &b2)
+{
+	return !(b1 == b2);
+}
+
+
+// (In-)validity testing
+template <size_t D, class T>
+static inline bool operator ! (const Box<D,T> &b)
+{
+	return !b.valid;
+}
 
 
 // Generate a .bbox filename from an input (scan) filename
@@ -161,4 +249,8 @@ static inline ::std::string bboxname(const ::std::string &filename)
 	return replace_ext(filename, "bbox");
 }
 
-}; // namespace trimesh
+} // namespace trimesh
+
+#undef inline
+
+#endif

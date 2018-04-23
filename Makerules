@@ -26,18 +26,21 @@
 #  LINK           - The entire linking process
 #  STATICLIB      - Create .a archive
 #  SHAREDLIB      - Create .so archive
-#  
+#
 #
 # Client Makefiles need to define a "default:" rule
 # - SMR
 #
 
+#
+# Define UNAME
+#
 ifdef windir
-        UNAME := Win32
+	UNAME := Win32
 else
-        UNAME := $(shell uname)
-        UNAME := $(patsubst CYGWIN%,Win32,$(UNAME))
-        UNAME := $(patsubst MINGW%,Win32,$(UNAME))
+	UNAME := $(shell uname)
+	UNAME := $(patsubst CYGWIN%,Win32,$(UNAME))
+	UNAME := $(patsubst MINGW%,Win32,$(UNAME))
 
 	ifeq ($(UNAME),Linux)
 		ARCH := $(shell uname -m)
@@ -53,25 +56,23 @@ else
 	endif
 endif
 
-ifndef DESTDIR
-        DESTDIR = .
+#
+# Other variable definitions
+#
+OBJDIR ?= OBJ.$(UNAME)
+DESTDIR ?= .
+ifndef MAKERULESDIR
+	MAKERULESDIR := $(subst /,,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
 
-OBJDIR = OBJ.$(UNAME)
+#
+# Rules
+#
 all: $(OBJDIR) $(DESTDIR) default
 
 $(OBJDIR) $(DESTDIR):
 	-mkdir $@
 
-ifdef MAKERULESDIR
-        include $(MAKERULESDIR)/Makedefs.$(UNAME)
-else
-        include Makedefs.$(UNAME)
-endif
-
-ifdef DEBUG
-        DEFINES += -DDEBUG
-endif
 debug:
 	$(MAKE) DEBUG=y
 
@@ -92,3 +93,7 @@ darwin64:
 
 .PHONY: all default clean debug win32 linux32 linux64 darwin32 darwin64
 
+#
+# Makedefs
+#
+include $(MAKERULESDIR)/Makedefs.$(UNAME)

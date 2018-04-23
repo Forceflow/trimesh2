@@ -25,10 +25,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
 
@@ -51,13 +47,11 @@
 int FGAPIENTRY glutExtensionSupported( const char* extension )
 {
   const char *extensions, *start;
-  const int len = strlen( extension );
+  const size_t len = strlen( extension );
 
-  /*
-   * Make sure there is a current window, and thus a current context available
-   */
-  freeglut_assert_ready;
-  freeglut_return_val_if_fail( fgStructure.Window != NULL, 0 );
+  /* Make sure there is a current window, and thus a current context available */
+  FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
+  freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
 
   if (strchr(extension, ' '))
     return 0;
@@ -82,14 +76,58 @@ int FGAPIENTRY glutExtensionSupported( const char* extension )
   return 0 ;
 }
 
+#ifndef GL_INVALID_FRAMEBUFFER_OPERATION
+#ifdef GL_INVALID_FRAMEBUFFER_OPERATION_EXT
+#define GL_INVALID_FRAMEBUFFER_OPERATION GL_INVALID_FRAMEBUFFER_OPERATION_EXT
+#else
+#define GL_INVALID_FRAMEBUFFER_OPERATION 0x0506
+#endif
+#endif
+
+#ifndef GL_TABLE_TOO_LARGE
+#ifdef GL_TABLE_TOO_LARGE_EXT
+#define GL_TABLE_TOO_LARGE GL_TABLE_TOO_LARGE_EXT
+#else
+#define GL_TABLE_TOO_LARGE 0x8031
+#endif
+#endif
+
+#ifndef GL_TEXTURE_TOO_LARGE
+#ifdef GL_TEXTURE_TOO_LARGE_EXT
+#define GL_TEXTURE_TOO_LARGE GL_TEXTURE_TOO_LARGE_EXT
+#else
+#define GL_TEXTURE_TOO_LARGE 0x8065
+#endif
+#endif
+
+/*
+ * A cut-down local version of gluErrorString to avoid depending on GLU.
+ */
+static const char* fghErrorString( GLenum error )
+{
+  switch ( error ) {
+  case GL_INVALID_ENUM: return "invalid enumerant";
+  case GL_INVALID_VALUE: return "invalid value";
+  case GL_INVALID_OPERATION: return "invalid operation";
+  case GL_STACK_OVERFLOW: return "stack overflow";
+  case GL_STACK_UNDERFLOW: return "stack underflow";
+  case GL_OUT_OF_MEMORY: return "out of memory";
+  case GL_TABLE_TOO_LARGE: return "table too large";
+  case GL_INVALID_FRAMEBUFFER_OPERATION: return "invalid framebuffer operation";
+  case GL_TEXTURE_TOO_LARGE: return "texture too large";
+  default: return "unknown GL error";
+  }
+}
+
 /*
  * This function reports all the OpenGL errors that happened till now
  */
 void FGAPIENTRY glutReportErrors( void )
 {
     GLenum error;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutReportErrors" );
     while( ( error = glGetError() ) != GL_NO_ERROR )
-        fgWarning( "GL error: %s", gluErrorString( error ) );
+        fgWarning( "GL error: %s", fghErrorString( error ) );
 }
 
 /*
@@ -97,10 +135,10 @@ void FGAPIENTRY glutReportErrors( void )
  */
 void FGAPIENTRY glutIgnoreKeyRepeat( int ignore )
 {
-    freeglut_assert_ready;
-    freeglut_assert_window;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutIgnoreKeyRepeat" );
+    FREEGLUT_EXIT_IF_NO_WINDOW ( "glutIgnoreKeyRepeat" );
 
-    fgStructure.Window->State.IgnoreKeyRepeat = ignore ? GL_TRUE : GL_FALSE;
+    fgStructure.CurrentWindow->State.IgnoreKeyRepeat = ignore ? GL_TRUE : GL_FALSE;
 }
 
 /*
@@ -113,7 +151,7 @@ void FGAPIENTRY glutIgnoreKeyRepeat( int ignore )
  */
 void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
 {
-    freeglut_assert_ready;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSetKeyRepeat" );
 
     switch( repeatMode )
     {
@@ -137,12 +175,12 @@ void FGAPIENTRY glutSetKeyRepeat( int repeatMode )
  */
 void FGAPIENTRY glutForceJoystickFunc( void )
 {
-#if !TARGET_HOST_WINCE
-    freeglut_assert_ready;
-    freeglut_return_if_fail( fgStructure.Window != NULL );
-    freeglut_return_if_fail( FETCH_WCB( *( fgStructure.Window ), Joystick ) );
-    fgJoystickPollWindow( fgStructure.Window );
-#endif /* !TARGET_HOST_WINCE */
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutForceJoystickFunc" );
+#if !defined(_WIN32_WCE)
+    freeglut_return_if_fail( fgStructure.CurrentWindow != NULL );
+    freeglut_return_if_fail( FETCH_WCB( *( fgStructure.CurrentWindow ), Joystick ) );
+    fgJoystickPollWindow( fgStructure.CurrentWindow );
+#endif /* !defined(_WIN32_WCE) */
 }
 
 /*
@@ -150,9 +188,8 @@ void FGAPIENTRY glutForceJoystickFunc( void )
  */
 void FGAPIENTRY glutSetColor( int nColor, GLfloat red, GLfloat green, GLfloat blue )
 {
-    /*
-     *
-     */
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSetColor" );
+    /* We really need to do something here. */
 }
 
 /*
@@ -160,9 +197,8 @@ void FGAPIENTRY glutSetColor( int nColor, GLfloat red, GLfloat green, GLfloat bl
  */
 GLfloat FGAPIENTRY glutGetColor( int color, int component )
 {
-    /*
-     *
-     */
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutGetColor" );
+    /* We really need to do something here. */
     return( 0.0f );
 }
 
@@ -171,9 +207,8 @@ GLfloat FGAPIENTRY glutGetColor( int color, int component )
  */
 void FGAPIENTRY glutCopyColormap( int window )
 {
-    /*
-     *
-     */
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutCopyColormap" );
+    /* We really need to do something here. */
 }
 
 /*** END OF FILE ***/

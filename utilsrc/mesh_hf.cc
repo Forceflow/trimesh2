@@ -8,31 +8,19 @@ Based on initial ideas developed together with Olaf Hall-Holt.
 */
 
 #include "TriMesh.h"
+#ifdef _WIN32
+# include "wingetopt.h"
+#else
+# include <unistd.h>
+#endif
 #include <cstdio>
-#include <cstdlib>
-#include <unistd.h>
-#include <vector>
 #include <set>
 #include <map>
 #include <queue>
-#include <utility>
-#include <algorithm>
+#include <iterator>
+#include <functional>
 using namespace std;
 using namespace trimesh;
-
-#ifndef M_LOG2E
-# define M_LOG2E 1.4426950408889634074
-#endif
-
-
-// Quick 'n dirty portable random number generator 
-static inline float tinyrnd()
-{
-	// Assumes unsigned is exactly 32 bits
-	static unsigned trand = 0;
-	trand = 1664525u * trand + 1013904223u;
-	return (float) trand / 4294967296.0f;
-}
 
 
 // An "edge" type and ordering functor
@@ -77,7 +65,7 @@ struct FaceStruct {
 	int v1, v2, v3;
 	int n12, n23, n31;
 	FaceStruct(int _v1, int _v2, int _v3,
-		   int _n12 = NO_FACE, int _n23 = NO_FACE, int _n31 = NO_FACE) :
+	           int _n12 = NO_FACE, int _n23 = NO_FACE, int _n31 = NO_FACE) :
 			v1(_v1), v2(_v2), v3(_v3),
 			n12(_n12), n23(_n23), n31(_n31)
 		{}
@@ -119,7 +107,7 @@ edgeset *find_boundary_edges(const TriMesh *themesh)
 	for (size_t f = 0; f < themesh->faces.size(); f++) {
 		for (int i = 0; i < 3; i++) {
 			int v1 = themesh->faces[f][i];
-			int v2 = themesh->faces[f][(i+1) % 3];
+			int v2 = themesh->faces[f][NEXT_MOD3(i)];
 
 			// Opposite-pointing edges cancel each other
 			if (!edges->erase(make_pair(v2,v1)))
@@ -134,8 +122,8 @@ edgeset *find_boundary_edges(const TriMesh *themesh)
 
 // Find the initial (before hole-filling) neighbors of all the boundary verts
 void find_initial_edge_neighbors(const TriMesh *themesh,
-				 const edgeset *edges,
-				 map< int, set<int> > &initial_edge_neighbors)
+                                 const edgeset *edges,
+                                 map< int, set<int> > &initial_edge_neighbors)
 {
 	size_t nv = themesh->vertices.size(), nf = themesh->faces.size();
 	vector<bool> is_edge(nv);
@@ -144,7 +132,7 @@ void find_initial_edge_neighbors(const TriMesh *themesh,
 		is_edge[i->second] = true;
 	}
 
-	for (size_t i = 0; i < nf; ++i) {
+	for (size_t i = 0; i < nf; i++) {
 		int v1 = themesh->faces[i][0];
 		int v2 = themesh->faces[i][1];
 		int v3 = themesh->faces[i][2];
@@ -203,7 +191,7 @@ vector<hole> *find_holes(edgeset *edges)
 			// Have we encountered this vertex before in this hole?
 			// XXX - linear search.  Yuck.
 			hole::iterator hi = find(newhole.begin(), newhole.end(),
-						 nextvert);
+			                         nextvert);
 			if (hi != newhole.end()) {
 				// Assuming everything is OK topologically,
 				// this could only have been caused if there
@@ -220,7 +208,7 @@ vector<hole> *find_holes(edgeset *edges)
 				// that nei->second is not in newhole
 
 				// Put the bad edges into "badedges"
-				for (hole::iterator tmp = hi; tmp+1 != newhole.end(); ++tmp)
+				for (hole::iterator tmp = hi; tmp+1 != newhole.end(); tmp++)
 					badedges.insert(make_pair(*tmp, *(tmp+1)));
 				badedges.insert(make_pair(lastvert, nextvert));
 				newhole.erase(hi+1, newhole.end());
@@ -270,9 +258,9 @@ void print_holes(const vector<hole> *holes, bool verbose)
 
 // Compute a quality metric for a potential triangle with three vertices
 inline float quality(const TriMesh *themesh, float meanedgelen,
-		     const vector<VertStruct> &newverts,
-		     int v1, int v2, int v3,
-		     bool hack = false)
+                     const vector<VertStruct> &newverts,
+                     int v1, int v2, int v3,
+                     bool hack = false)
 {
 
 #define VERT(v) ((size_t(v) < themesh->vertices.size()) ? \
@@ -292,7 +280,7 @@ inline float quality(const TriMesh *themesh, float meanedgelen,
 
 	vec norm = side2 CROSS side1;
 	normalize(norm);
-	
+
 	float dot1 = norm DOT NORM(v1);
 	float dot2 = norm DOT NORM(v2);
 	float dot3 = norm DOT NORM(v3);
@@ -336,10 +324,10 @@ inline float quality(const TriMesh *themesh, float meanedgelen,
 // Fill the given hole, and add the newly-created triangles to newtris
 // XXX - FIXME!  This is O(n^2)
 void fill_hole(const TriMesh *themesh, float meanedgelen,
-	       const vector<VertStruct> &newverts,
-	       map< int, set<int> > &initial_edge_neighbors,
-	       const hole &thehole,
-	       vector<FaceStruct> &newtris)
+               const vector<VertStruct> &newverts,
+               map< int, set<int> > &initial_edge_neighbors,
+               const hole &thehole,
+               vector<FaceStruct> &newtris)
 {
 	vector<bool> used(thehole.size(), false);
 
@@ -348,7 +336,7 @@ void fill_hole(const TriMesh *themesh, float meanedgelen,
 		int j = (i+1) % thehole.size();
 		int k = (j+1) % thehole.size();
 		float qual = quality(themesh, meanedgelen, newverts,
-				     thehole[i], thehole[j], thehole[k], true);
+		                     thehole[i], thehole[j], thehole[k], true);
 		if (initial_edge_neighbors[thehole[i]].find(thehole[k]) !=
 		    initial_edge_neighbors[thehole[i]].end())
 			qual = -1000.0f;
@@ -383,18 +371,18 @@ void fill_hole(const TriMesh *themesh, float meanedgelen,
 
 			// Insert potential new triangles
 			float q13f = quality(themesh, meanedgelen, newverts,
-					     thehole[next.v1],
-					     thehole[next.v3],
-					     thehole[forw],
-					     true);
+			                     thehole[next.v1],
+			                     thehole[next.v3],
+			                     thehole[forw],
+			                     true);
 			if (initial_edge_neighbors[thehole[next.v1]].find(thehole[forw]) !=
 			    initial_edge_neighbors[thehole[next.v1]].end())
 				q13f = -2000.0f;
 			float qb13 = quality(themesh, meanedgelen, newverts,
-					     thehole[back],
-					     thehole[next.v1],
-					     thehole[next.v3],
-					     true);
+			                     thehole[back],
+			                     thehole[next.v1],
+			                     thehole[next.v3],
+			                     true);
 			if (initial_edge_neighbors[thehole[back]].find(thehole[next.v3]) !=
 			    initial_edge_neighbors[thehole[back]].end())
 				qb13 = -2000.0f;
@@ -438,8 +426,8 @@ void find_neighbors(vector<FaceStruct> &tris)
 
 // Should we flip (v1,v2,v3) and (v1,v3,v4) to (v1,v2,v4) and (v2,v3,v4)?
 bool should_flip(const TriMesh *themesh, float meanedgelen,
-		 const vector<VertStruct> &newverts,
-		 int v1, int v2, int v3, int v4)
+                 const vector<VertStruct> &newverts,
+                 int v1, int v2, int v3, int v4)
 {
 	// Step 1 - Sanity check
 	if (v2 == v4)
@@ -477,9 +465,9 @@ bool should_flip(const TriMesh *themesh, float meanedgelen,
 
 // Improve the triangulation of a hole by performing a bunch of edge flips
 void improve_triangulation(const TriMesh *themesh, float meanedgelen,
-			   const vector<VertStruct> &newverts,
-			   map< int, set<int> > &initial_edge_neighbors,
-			   vector<FaceStruct> &tris)
+                           const vector<VertStruct> &newverts,
+                           map< int, set<int> > &initial_edge_neighbors,
+                           vector<FaceStruct> &tris)
 {
 	int n = tris.size();
 	if (!n)
@@ -504,19 +492,18 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 	}
 	for (set<int>::const_iterator i = edgeverts.begin();
 	     i != edgeverts.end();
-	     ++i) {
+	     i++) {
 		for (set<int>::const_iterator j = initial_edge_neighbors[*i].begin();
 		     j != initial_edge_neighbors[*i].end();
-		     ++j) {
+		     j++) {
 			edges.insert(make_pair(*i, *j));
 			edges.insert(make_pair(*j, *i));
 		}
 	}
 
-	//srand48(123);
 	for (int iter = 0; iter < 2*n; iter++) {
 		//int i = iter % n;
-		int i = int(tinyrnd() * n);
+		int i = uniform_rnd(n);
 		if (tris[i].n12 != NO_FACE) {
 			int j = tris[i].n12;
 			int v1 = tris[i].v1, v2 = tris[i].v2, v3 = tris[i].v3;
@@ -544,7 +531,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n23 = j;
 					tris[j].n12 = i;
 				} else if (match1 == 2 &&
-					   edges.find(make_pair(tris[i].v3, tris[j].v3)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v3, tris[j].v3)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v1, tris[i].v2));
 					edges.erase(make_pair(tris[i].v2, tris[i].v1));
 					edges.insert(make_pair(tris[i].v3, tris[j].v3));
@@ -562,7 +549,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n23 = j;
 					tris[j].n23 = i;
 				} else if (match1 == 3 &&
-					   edges.find(make_pair(tris[i].v3, tris[j].v1)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v3, tris[j].v1)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v1, tris[i].v2));
 					edges.erase(make_pair(tris[i].v2, tris[i].v1));
 					edges.insert(make_pair(tris[i].v3, tris[j].v1));
@@ -609,7 +596,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n31 = j;
 					tris[j].n12 = i;
 				} else if (match2 == 2 &&
-					   edges.find(make_pair(tris[i].v1, tris[j].v3)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v1, tris[j].v3)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v2, tris[i].v3));
 					edges.erase(make_pair(tris[i].v3, tris[i].v2));
 					edges.insert(make_pair(tris[i].v1, tris[j].v3));
@@ -627,7 +614,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n31 = j;
 					tris[j].n23 = i;
 				} else if (match2 == 3 &&
-					   edges.find(make_pair(tris[i].v1, tris[j].v1)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v1, tris[j].v1)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v2, tris[i].v2));
 					edges.erase(make_pair(tris[i].v3, tris[i].v3));
 					edges.insert(make_pair(tris[i].v1, tris[j].v1));
@@ -674,7 +661,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n12 = j;
 					tris[j].n12 = i;
 				} else if (match3 == 2 &&
-					   edges.find(make_pair(tris[i].v2, tris[j].v3)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v2, tris[j].v3)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v3, tris[i].v1));
 					edges.erase(make_pair(tris[i].v1, tris[i].v3));
 					edges.insert(make_pair(tris[i].v2, tris[j].v3));
@@ -692,7 +679,7 @@ void improve_triangulation(const TriMesh *themesh, float meanedgelen,
 					tris[i].n12 = j;
 					tris[j].n23 = i;
 				} else if (match3 == 3 &&
-					   edges.find(make_pair(tris[i].v2, tris[j].v1)) == edges.end()) {
+				           edges.find(make_pair(tris[i].v2, tris[j].v1)) == edges.end()) {
 					edges.erase(make_pair(tris[i].v3, tris[i].v1));
 					edges.erase(make_pair(tris[i].v1, tris[i].v3));
 					edges.insert(make_pair(tris[i].v2, tris[j].v1));
@@ -743,11 +730,11 @@ void tesselate_holefill(const TriMesh *themesh,
 			// Subdivide edge 1->2
 			int j = tris[i].n12;
 			int corner = (tris[j].v1 == tris[i].v1 ? tris[j].v2 :
-				      tris[j].v2 == tris[i].v1 ? tris[j].v3 :
-				      tris[j].v1);
+			              tris[j].v2 == tris[i].v1 ? tris[j].v3 :
+			              tris[j].v1);
 			int neighbor = (tris[j].v1 == tris[i].v1 ? tris[j].n23 :
-				        tris[j].v2 == tris[i].v1 ? tris[j].n31 :
-				        tris[j].n12);
+					tris[j].v2 == tris[i].v1 ? tris[j].n31 :
+					tris[j].n12);
 			point newpoint = 0.5f * (v1 + v2);
 			vec norm1 = trinorm(v1, v2, v3);
 			vec norm2 = trinorm(v1, VERT(corner), v2);
@@ -757,20 +744,20 @@ void tesselate_holefill(const TriMesh *themesh,
 			newverts.push_back(VertStruct(newpoint, newnorm));
 			int new_tri1 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  tris[i].v2,
-						  tris[i].v3,
-						  tris[i].n12,
-						  tris[i].n23,
-						  i));
+			                          tris[i].v2,
+			                          tris[i].v3,
+			                          tris[i].n12,
+			                          tris[i].n23,
+			                          i));
 			tris[i].v2 = new_ind;
 			tris[i].n23 = new_tri1;
 			int new_tri2 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  corner,
-						  tris[new_tri1].v2,
-						  j,
-						  neighbor,
-						  new_tri1));
+			                          corner,
+			                          tris[new_tri1].v2,
+			                          j,
+			                          neighbor,
+			                          new_tri1));
 			update_neighbor(tris[j], neighbor, new_tri2);
 			update_neighbor(tris[new_tri1], j, new_tri2);
 			if (tris[j].v1 == tris[new_tri1].v2)
@@ -789,11 +776,11 @@ void tesselate_holefill(const TriMesh *themesh,
 			// Subdivide edge 2->3
 			int j = tris[i].n23;
 			int corner = (tris[j].v1 == tris[i].v2 ? tris[j].v2 :
-				      tris[j].v2 == tris[i].v2 ? tris[j].v3 :
-				      tris[j].v1);
+			              tris[j].v2 == tris[i].v2 ? tris[j].v3 :
+			              tris[j].v1);
 			int neighbor = (tris[j].v1 == tris[i].v2 ? tris[j].n23 :
-				        tris[j].v2 == tris[i].v2 ? tris[j].n31 :
-				        tris[j].n12);
+					tris[j].v2 == tris[i].v2 ? tris[j].n31 :
+					tris[j].n12);
 			point newpoint = 0.5f * (v2 + v3);
 			vec norm1 = trinorm(v1, v2, v3);
 			vec norm2 = trinorm(v2, VERT(corner), v3);
@@ -803,20 +790,20 @@ void tesselate_holefill(const TriMesh *themesh,
 			newverts.push_back(VertStruct(newpoint, newnorm));
 			int new_tri1 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  tris[i].v3,
-						  tris[i].v1,
-						  tris[i].n23,
-						  tris[i].n31,
-						  i));
+			                          tris[i].v3,
+			                          tris[i].v1,
+			                          tris[i].n23,
+			                          tris[i].n31,
+			                          i));
 			tris[i].v3 = new_ind;
 			tris[i].n31 = new_tri1;
 			int new_tri2 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  corner,
-						  tris[new_tri1].v2,
-						  j,
-						  neighbor,
-						  new_tri1));
+			                          corner,
+			                          tris[new_tri1].v2,
+			                          j,
+			                          neighbor,
+			                          new_tri1));
 			update_neighbor(tris[j], neighbor, new_tri2);
 			update_neighbor(tris[new_tri1], j, new_tri2);
 			if (tris[j].v1 == tris[new_tri1].v2)
@@ -835,11 +822,11 @@ void tesselate_holefill(const TriMesh *themesh,
 			// Subdivide edge 3->1
 			int j = tris[i].n31;
 			int corner = (tris[j].v1 == tris[i].v3 ? tris[j].v2 :
-				      tris[j].v2 == tris[i].v3 ? tris[j].v3 :
-				      tris[j].v1);
+			              tris[j].v2 == tris[i].v3 ? tris[j].v3 :
+			              tris[j].v1);
 			int neighbor = (tris[j].v1 == tris[i].v3 ? tris[j].n23 :
-				        tris[j].v2 == tris[i].v3 ? tris[j].n31 :
-				        tris[j].n12);
+					tris[j].v2 == tris[i].v3 ? tris[j].n31 :
+					tris[j].n12);
 			point newpoint = 0.5f * (v3 + v1);
 			vec norm1 = trinorm(v1, v2, v3);
 			vec norm2 = trinorm(v3, VERT(corner), v1);
@@ -849,20 +836,20 @@ void tesselate_holefill(const TriMesh *themesh,
 			newverts.push_back(VertStruct(newpoint, newnorm));
 			int new_tri1 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  tris[i].v1,
-						  tris[i].v2,
-						  tris[i].n31,
-						  tris[i].n12,
-						  i));
+			                          tris[i].v1,
+			                          tris[i].v2,
+			                          tris[i].n31,
+			                          tris[i].n12,
+			                          i));
 			tris[i].v1 = new_ind;
 			tris[i].n12 = new_tri1;
 			int new_tri2 = tris.size();
 			tris.push_back(FaceStruct(new_ind,
-						  corner,
-						  tris[new_tri1].v2,
-						  j,
-						  neighbor,
-						  new_tri1));
+			                          corner,
+			                          tris[new_tri1].v2,
+			                          j,
+			                          neighbor,
+			                          new_tri1));
 			update_neighbor(tris[j], neighbor, new_tri2);
 			update_neighbor(tris[new_tri1], j, new_tri2);
 			if (tris[j].v1 == tris[new_tri1].v2)
@@ -883,10 +870,10 @@ void tesselate_holefill(const TriMesh *themesh,
 
 // Relax a triangulation of a hole.  Moves vertices firstvert..newverts.size()-1
 void relax_triangulation(TriMesh *themesh,
-			 float smooth, float csmooth, int iterations,
-			 vector<VertStruct> &newverts,
-			 int firstvert,
-			 const vector<FaceStruct> &tris)
+                         float smooth, float csmooth, int iterations,
+                         vector<VertStruct> &newverts,
+                         int firstvert,
+                         const vector<FaceStruct> &tris)
 {
 	int firstvert_g = firstvert + themesh->vertices.size();
 	int nverts = newverts.size() - firstvert;
@@ -936,7 +923,7 @@ void relax_triangulation(TriMesh *themesh,
 				vec othernorm;
 				if (tris[i].n12 == NO_FACE) {
 					othernorm = NORM(tris[i].v1) +
-						    NORM(tris[i].v2);
+					            NORM(tris[i].v2);
 				} else {
 					int j = tris[i].n12;
 					othernorm = trinorm(
@@ -960,7 +947,7 @@ void relax_triangulation(TriMesh *themesh,
 				vec othernorm;
 				if (tris[i].n23 == NO_FACE) {
 					othernorm = NORM(tris[i].v2) +
-						    NORM(tris[i].v3);
+					            NORM(tris[i].v3);
 				} else {
 					int j = tris[i].n23;
 					othernorm = trinorm(
@@ -984,7 +971,7 @@ void relax_triangulation(TriMesh *themesh,
 				vec othernorm;
 				if (tris[i].n31 == NO_FACE) {
 					othernorm = NORM(tris[i].v3) +
-						    NORM(tris[i].v1);
+					            NORM(tris[i].v1);
 				} else {
 					int j = tris[i].n31;
 					othernorm = trinorm(
@@ -1098,14 +1085,14 @@ int main(int argc, char *argv[])
 		vector<FaceStruct> tmptris;
 		printf("f"); fflush(stdout);
 		fill_hole(themesh, mel, newverts,
-			  initial_edge_neighbors,
-			  (*holes)[i], tmptris);
+		          initial_edge_neighbors,
+		          (*holes)[i], tmptris);
 		if (!fillonly) {
 			printf("n"); fflush(stdout);
 			find_neighbors(tmptris);
 			printf("i"); fflush(stdout);
 			improve_triangulation(themesh, mel, newverts, initial_edge_neighbors, tmptris);
-			int niters = int(ceil(2.0f*log((float)tmptris.size())*M_LOG2E - 3.0f));
+			int niters = int(ceil(2.0f*log((float)tmptris.size())*M_LOG2Ef - 3.0f));
 			niters = min(niters, 4);
 			for (int j=0; j < niters; j++) {
 				printf("t"); fflush(stdout);
@@ -1114,9 +1101,9 @@ int main(int argc, char *argv[])
 				improve_triangulation(themesh, mel, newverts, initial_edge_neighbors, tmptris);
 				printf("r"); fflush(stdout);
 				relax_triangulation(themesh,
-						    0.2f, (nocurv ? 0 : 2), 10,
-						    newverts, firstnewvert,
-						    tmptris);
+				                    0.2f, (nocurv ? 0 : 2), 10,
+				                    newverts, firstnewvert,
+				                    tmptris);
 				//improve_triangulation(themesh, mel, newverts, initial_edge_neighbors, tmptris);
 			}
 
@@ -1127,9 +1114,9 @@ int main(int argc, char *argv[])
 			improve_triangulation(themesh, mel, newverts, initial_edge_neighbors, tmptris);
 			printf("r"); fflush(stdout);
 			relax_triangulation(themesh,
-					    0.2f, (nocurv ? 0 : 2), 50,
-					    newverts, firstnewvert,
-					    tmptris);
+			                    0.2f, (nocurv ? 0 : 2), 50,
+			                    newverts, firstnewvert,
+			                    tmptris);
 		}
 
 		copy(tmptris.begin(), tmptris.end(), back_inserter(newtris));

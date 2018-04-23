@@ -8,7 +8,6 @@ Reorder and remap vertices.
 
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
-#include <vector>
 using namespace std;
 #define dprintf TriMesh::dprintf
 #define eprintf TriMesh::eprintf
@@ -96,7 +95,7 @@ void remap_verts(TriMesh *mesh, const std::vector<int> &remap_table)
 	}
 
 #define ERASE(property) mesh->property.erase(mesh->property.begin()+last+1, \
-					     mesh->property.end())
+                                             mesh->property.end())
 	ERASE(vertices);
 	if (have_col) ERASE(colors);
 	if (have_conf) ERASE(confidences);
@@ -185,6 +184,9 @@ void remap_verts(TriMesh *mesh, const std::vector<int> &remap_table)
 // they are referenced by the grid, tstrips, or faces.
 void reorder_verts(TriMesh *mesh)
 {
+	if (mesh->grid.empty() && mesh->tstrips.empty() && mesh->faces.empty())
+		return;
+
 	dprintf("Reordering vertices... ");
 
 	int nv = mesh->vertices.size();
@@ -230,4 +232,4 @@ void reorder_verts(TriMesh *mesh)
 	dprintf("Done.\n");
 }
 
-}; // namespace trimesh
+} // namespace trimesh

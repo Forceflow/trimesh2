@@ -1,10 +1,5 @@
-ifdef MAKERULESDIR
-        include $(MAKERULESDIR)/Makedefs.Linux
-else
-        include Makedefs.Linux
-endif
+include $(MAKERULESDIR)/Makedefs.Linux
 
 ARCHOPTS = -m64 -march=core2 -mfpmath=sse -mtune=native
-ARCHOPTS += -fopenmp
 XLIBDIR = /usr/X11R6/lib64
 

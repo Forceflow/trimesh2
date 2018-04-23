@@ -11,15 +11,13 @@ for their alignment.
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
 #include "ICP.h"
-#include <cstdio>
-#include <cstdlib>
-#ifdef _MSC_VER
-#include <getopt.h>
+#include "timestamp.h"
+#ifdef _WIN32
+# include "wingetopt.h"
 #else
-#include <unistd.h>
+# include <unistd.h>
 #endif
-#include <vector>
-#include <string>
+#include <cstdio>
 using namespace std;
 using namespace trimesh;
 
@@ -30,26 +28,27 @@ void usage(const char *myname)
 	fprintf(stderr, "Reads transforms in mesh1.xf and mesh2.xf, updates the latter\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "	-a		Align using affine xform\n");
+	fprintf(stderr, "	-b		Bulk mode: overlap checking, write to mesh1--mesh2.xf\n");
 	fprintf(stderr, "	-r		Align using rigid-body transform (default)\n");
 	fprintf(stderr, "	-s		Align using rigid + isotropic scale\n");
+	fprintf(stderr, "	-t		Align using translation only\n");
 	fprintf(stderr, "	-v		Verbose\n");
-	fprintf(stderr, "	-b		Bulk mode: overlap checking, write to mesh1--mesh2.xf\n");
 	exit(1);
 }
 
 int main(int argc, char *argv[])
 {
+	ICP_xform_type xform_type = ICP_RIGID;
 	int verbose = 0;
-	bool do_scale = false;
-	bool do_affine = false;
 	bool bulkmode = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "harsvb")) != EOF) {
+	while ((c = getopt(argc, argv, "harstvb")) != EOF) {
 		switch (c) {
-			case 'a': do_affine = true; do_scale = false; break;
-			case 'r': do_affine = do_scale = false; break;
-			case 's': do_scale = true; do_affine = false; break;
+			case 'a': xform_type = ICP_AFFINE; break;
+			case 'r': xform_type = ICP_RIGID; break;
+			case 's': xform_type = ICP_SIMILARITY; break;
+			case 't': xform_type = ICP_TRANSLATION; break;
 			case 'v': verbose = 2; break;
 			case 'b': bulkmode = true; break;
 			default: usage(argv[0]);
@@ -77,13 +76,18 @@ int main(int argc, char *argv[])
 	string xffilename2 = xfname(filename2);
 	xf2.read(xffilename2);
 
+	timestamp t = now();
 	KDtree *kd1 = new KDtree(mesh1->vertices);
 	KDtree *kd2 = new KDtree(mesh2->vertices);
+	if (verbose > 1) {
+		TriMesh::dprintf("Building KDtrees: %.3f msec.\n",
+			(now() - t) * 1000.0f);
+	}
 	vector<float> weights1, weights2;
 
 	if (bulkmode) {
-		float area1 = mesh1->stat(TriMesh::STAT_TOTAL, TriMesh::STAT_FACEAREA);
-		float area2 = mesh2->stat(TriMesh::STAT_TOTAL, TriMesh::STAT_FACEAREA);
+		float area1 = mesh1->stat(TriMesh::STAT_SUM, TriMesh::STAT_FACEAREA);
+		float area2 = mesh2->stat(TriMesh::STAT_SUM, TriMesh::STAT_FACEAREA);
 		float overlap_area, overlap_dist;
 		find_overlap(mesh1, mesh2, xf1, xf2, kd1, kd2,
 			overlap_area, overlap_dist);
@@ -93,15 +97,12 @@ int main(int argc, char *argv[])
 			exit(1);
 		} else {
 			TriMesh::dprintf("%.1f%% overlap\n",
-				frac_overlap * 100.0);
+				frac_overlap * 100.0f);
 		}
 	}
 
 	float err = ICP(mesh1, mesh2, xf1, xf2, kd1, kd2, weights1, weights2,
-		verbose, do_scale, do_affine);
-	if (err >= 0.0f)
-		err = ICP(mesh1, mesh2, xf1, xf2, kd1, kd2, weights1, weights2,
-			verbose, do_scale, do_affine);
+			0.0f, verbose, xform_type);
 
 	if (err < 0.0f) {
 		TriMesh::eprintf("ICP failed\n");
@@ -120,6 +121,4 @@ int main(int argc, char *argv[])
 	} else {
 		xf2.write(xffilename2);
 	}
-	exit(0);
 }
-

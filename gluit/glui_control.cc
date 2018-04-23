@@ -108,9 +108,6 @@ void    GLUI_Control::pack_old( int x, int y )
   /*** Record start of this set of columns ***/
   y_top_column = curr_y;
   column_x     = 0;
-  if ( this == glui->main_panel ) {
-    x=x;
-  }
   /*** Iterate over children, packing them first ***/
   node = (GLUI_Control*) this->first_child();
   while( node != NULL ) {
@@ -850,7 +847,7 @@ void     GLUI_Control::init_live( void )
 int  GLUI_Control::needs_idle( void )
 { 
   return false; 
-};
+}
 
 
 /*********************************** GLUI_Control::~GLUI_Control() **********/
@@ -1015,7 +1012,7 @@ void   GLUI_Control::set_name(const char *string )
 
   if ( glui) 
     glui->refresh(); 
-};
+}
 
 
 

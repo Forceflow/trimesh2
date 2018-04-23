@@ -2,8 +2,8 @@
 Szymon Rusinkiewicz
 Princeton University
 
-lmsmooth.cc
-Taubin lambda/mu mesh smoothing
+umbrella.cc
+Umbrella and Taubin lambda/mu mesh smoothing
 */
 
 #include "TriMesh.h"
@@ -20,7 +20,7 @@ void umbrella(TriMesh *mesh, float stepsize, bool tangent /* = false */)
 	mesh->need_adjacentfaces();
 	if (tangent)
 		mesh->need_normals();
-	size_t nv = mesh->vertices.size();
+	int nv = mesh->vertices.size();
 	std::vector<vec> disp(nv);
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
@@ -44,12 +44,12 @@ void umbrella(TriMesh *mesh, float stepsize, bool tangent /* = false */)
 			disp[i].clear();
 #endif
 		} else {
-			size_t nn = mesh->neighbors[i].size();
+			int nn = mesh->neighbors[i].size();
 			if (!nn)
 				continue;
 			for (int j = 0; j < nn; j++)
 				disp[i] += mesh->vertices[mesh->neighbors[i][j]];
-			disp[i] /= (float)nn;
+			disp[i] /= nn;
 			disp[i] -= mesh->vertices[i];
 		}
 	}
@@ -87,4 +87,30 @@ void lmsmooth(TriMesh *mesh, int niters)
 	mesh->bsphere.valid = false;
 }
 
-}; // namespace trimesh
+
+// One iteration of umbrella-operator smoothing on the normals
+void numbrella(TriMesh *mesh, float stepsize)
+{
+	mesh->need_neighbors();
+	mesh->need_normals();
+	int nv = mesh->normals.size();
+	std::vector<vec> disp(nv);
+#pragma omp parallel for
+	for (int i = 0; i < nv; i++) {
+		int nn = mesh->neighbors[i].size();
+		if (!nn)
+			continue;
+		for (int j = 0; j < nn; j++)
+			disp[i] += mesh->normals[mesh->neighbors[i][j]];
+		disp[i] /= nn;
+		disp[i] -= mesh->normals[i];
+	}
+
+#pragma omp parallel for
+	for (int i = 0; i < nv; i++) {
+		mesh->normals[i] += stepsize * disp[i];
+		normalize(mesh->normals[i]);
+	}
+}
+
+} // namespace trimesh

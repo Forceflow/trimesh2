@@ -1,46 +1,59 @@
 CC = gcc
 CXX = g++
+#CC = clang
+#CXX = clang++
+#CXX = clang++ -stdlib=libc++
 AR = ar
 
 ARCHOPTS = -m32 -march=core2 -mfpmath=sse -mtune=native
-ARCHOPTS += -fopenmp
-COPTS = -Wall -Wextra -Wno-unused -Wno-unknown-pragmas
-DEFINES += -U_FORTIFY_SOURCE
+COPTS = -fno-strict-overflow -fno-math-errno -fno-trapping-math
+COPTS += -Wall -Wextra -Wshadow
+DEFINES = -U_FORTIFY_SOURCE
 XLIBDIR = /usr/X11R6/lib
 
 ifdef DEBUG
-	COPTS += -ggdb3
+	COPTS += -O1 -ggdb3 -fno-omit-frame-pointer
+	DEFINES += -DDEBUG
 else
-	COPTS += -O3 -funroll-loops -fomit-frame-pointer -ftree-vectorize
-	COPTS += -fno-math-errno -funsafe-math-optimizations
+	COPTS += -O3 -fomit-frame-pointer
+	DEFINES += -DNDEBUG
 	LDOPTS = -s
 endif
 
+ifeq (,$(shell $(CXX) --version | grep clang))
+	# Real gcc, not clang
+	COPTS += -fno-delete-null-pointer-checks
+	OPENMPOPTS = -fopenmp
+endif
+
 CXXOPTS = $(COPTS)
-CFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(COPTS)
-CXXFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(CXXOPTS)
+CFLAGS = $(ARCHOPTS) $(OPENMPOPTS) $(INCLUDES) $(DEFINES) $(COPTS)
+CXXFLAGS = $(ARCHOPTS) $(OPENMPOPTS) $(INCLUDES) $(DEFINES) $(CXXOPTS)
 LDFLAGS = $(LIBDIR) $(LDOPTS)
 
 
 LIBS = -lm
-GLLIBS = -L$(XLIBDIR) -lgluit -lGL -lGLU -lX11
-# The following should not be necessary on modern systems
-# GLLIBS += -lXi -lXmu
-CHOLMODLIBS = -lcholmod -lamd -lcolamd -lccolamd -lcamd -lmetis -llapack -lblas
+GLLIBS = -L$(XLIBDIR) -lgluit -lGLU -lGL -lX11
 
 
 $(OBJDIR)/%.o: %.c
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CC) $(CFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(OBJDIR)/%.o: %.cc
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
+ifneq (,$(findstring -L,$(LIBDIR)))
+VPATH = $(subst -L,,$(LIBDIR))
+endif
 
 define LINK
 	@ echo "Linking $@"
@@ -53,13 +66,6 @@ define STATICLIB
 	@ rm -f $@
 	@ $(AR) -rcs $@ $^
 endef
-
-define SHAREDLIB
-	@ echo "Creating library $@"
-	@ rm -f $@
-	@ $(CXX) $(CXXFLAGS) -shared $^ -o $@
-endef
-
 
 -include $(OBJDIR)/*.d
 

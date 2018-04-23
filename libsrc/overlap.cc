@@ -8,19 +8,11 @@ Compute overlap area and mesh-to-mesh distance for two meshes
 
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
+#include "KDtree.h"
 using namespace std;
 
 
 namespace trimesh {
-
-// Quick 'n dirty portable random number generator 
-static inline float tinyrnd()
-{
-	static unsigned trand = 0;
-	trand = 1664525u * trand + 1013904223u;
-	return (float) trand / 4294967296.0f;
-}
-
 
 // Find the overlap area and RMS distance from mesh1 to mesh2.  Used by
 // find_overlap in both directions, below
@@ -62,17 +54,17 @@ static void find_overlap_onedir(TriMesh *mesh1, TriMesh *mesh2,
 
 	rmsdist /= area;
 	rmsdist = sqrt(rmsdist);
-	area *= mesh1->stat(TriMesh::STAT_TOTAL, TriMesh::STAT_FACEAREA)
+	area *= mesh1->stat(TriMesh::STAT_SUM, TriMesh::STAT_FACEAREA)
 		/ area_considered;
 }
 
 
-// Find overlap area and RMS distance between mesh1 and mesh2. 
-// rmsdist is unchanged if area returned as zero 
+// Find overlap area and RMS distance between mesh1 and mesh2.
+// rmsdist is unchanged if area returned as zero
 void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
-		  const xform &xf1, const xform &xf2,
-		  const KDtree *kd1, const KDtree *kd2,
-		  float &area, float &rmsdist)
+                  const xform &xf1, const xform &xf2,
+                  const KDtree *kd1, const KDtree *kd2,
+                  float &area, float &rmsdist)
 {
 	mesh1->need_normals();
 	mesh1->need_neighbors();
@@ -84,7 +76,7 @@ void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 	mesh2->need_pointareas();
 
 	float area1, area2, rmsdist1, rmsdist2;
-	
+
 	TriMesh::dprintf("Finding overlap 1->2... ");
 	find_overlap_onedir(mesh1, mesh2, xf1, xf2, kd2, area1, rmsdist1);
 	TriMesh::dprintf("area = %g, RMS distance = %g\n", area1, rmsdist1);
@@ -108,8 +100,8 @@ void find_overlap(TriMesh *mesh1, TriMesh *mesh2, float &area, float &rmsdist)
 }
 
 void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
-        	  const xform &xf1, const xform &xf2,
-		  float &area, float &rmsdist)
+                  const xform &xf1, const xform &xf2,
+                  float &area, float &rmsdist)
 {
 	KDtree *kd1 = new KDtree(mesh1->vertices);
 	KDtree *kd2 = new KDtree(mesh2->vertices);
@@ -118,4 +110,4 @@ void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 	delete kd1;
 }
 
-}; // namespace trimesh
+} // namespace trimesh

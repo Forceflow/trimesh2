@@ -17,18 +17,12 @@ Uses algorithm from
 using namespace std;
 
 
-// i+1 and i-1 modulo 3
-// This way of computing it tends to be faster than using %
-#define NEXT(i) ((i)<2 ? (i)+1 : (i)-2)
-#define PREV(i) ((i)>0 ? (i)-1 : (i)+2)
-
-
 namespace trimesh {
 
 // Rotate a coordinate system to be perpendicular to the given normal
 static void rot_coord_sys(const vec &old_u, const vec &old_v,
-			  const vec &new_norm,
-			  vec &new_u, vec &new_v)
+                          const vec &new_norm,
+                          vec &new_u, vec &new_v)
 {
 	new_u = old_u;
 	new_v = old_v;
@@ -39,8 +33,19 @@ static void rot_coord_sys(const vec &old_u, const vec &old_v,
 		new_v = -new_v;
 		return;
 	}
+
+	// Perpendicular to old_norm and in the plane of old_norm and new_norm
 	vec perp_old = new_norm - ndot * old_norm;
+
+	// Perpendicular to new_norm and in the plane of old_norm and new_norm
+	// vec perp_new = ndot * new_norm - old_norm;
+
+	// perp_old - perp_new, with normalization constants folded in
 	vec dperp = 1.0f / (1 + ndot) * (old_norm + new_norm);
+
+	// Subtracts component along perp_old, and adds the same amount along
+	// perp_new.  Leaves unchanged the component perpendicular to the
+	// plane containing old_norm and new_norm.
 	new_u -= dperp * (new_u DOT perp_old);
 	new_v -= dperp * (new_v DOT perp_old);
 }
@@ -50,9 +55,9 @@ static void rot_coord_sys(const vec &old_u, const vec &old_v,
 // (which are assumed to be unit-length and perpendicular) to the
 // new_u, new_v basis.
 void proj_curv(const vec &old_u, const vec &old_v,
-	       float old_ku, float old_kuv, float old_kv,
-	       const vec &new_u, const vec &new_v,
-	       float &new_ku, float &new_kuv, float &new_kv)
+               float old_ku, float old_kuv, float old_kv,
+               const vec &new_u, const vec &new_v,
+               float &new_ku, float &new_kuv, float &new_kv)
 {
 	vec r_new_u, r_new_v;
 	rot_coord_sys(new_u, new_v, old_u CROSS old_v, r_new_u, r_new_v);
@@ -82,30 +87,30 @@ void proj_dcurv(const vec &old_u, const vec &old_v,
 	float v2 = r_new_v DOT old_v;
 
 	new_dcurv[0] = old_dcurv[0]*u1*u1*u1 +
-		       old_dcurv[1]*3.0f*u1*u1*v1 +
-		       old_dcurv[2]*3.0f*u1*v1*v1 +
-		       old_dcurv[3]*v1*v1*v1;
+	               old_dcurv[1]*3.0f*u1*u1*v1 +
+	               old_dcurv[2]*3.0f*u1*v1*v1 +
+	               old_dcurv[3]*v1*v1*v1;
 	new_dcurv[1] = old_dcurv[0]*u1*u1*u2 +
-		       old_dcurv[1]*(u1*u1*v2 + 2.0f*u2*u1*v1) +
-		       old_dcurv[2]*(u2*v1*v1 + 2.0f*u1*v1*v2) +
-		       old_dcurv[3]*v1*v1*v2;
+	               old_dcurv[1]*(u1*u1*v2 + 2.0f*u2*u1*v1) +
+	               old_dcurv[2]*(u2*v1*v1 + 2.0f*u1*v1*v2) +
+	               old_dcurv[3]*v1*v1*v2;
 	new_dcurv[2] = old_dcurv[0]*u1*u2*u2 +
-		       old_dcurv[1]*(u2*u2*v1 + 2.0f*u1*u2*v2) +
-		       old_dcurv[2]*(u1*v2*v2 + 2.0f*u2*v2*v1) +
-		       old_dcurv[3]*v1*v2*v2;
+	               old_dcurv[1]*(u2*u2*v1 + 2.0f*u1*u2*v2) +
+	               old_dcurv[2]*(u1*v2*v2 + 2.0f*u2*v2*v1) +
+	               old_dcurv[3]*v1*v2*v2;
 	new_dcurv[3] = old_dcurv[0]*u2*u2*u2 +
-		       old_dcurv[1]*3.0f*u2*u2*v2 +
-		       old_dcurv[2]*3.0f*u2*v2*v2 +
-		       old_dcurv[3]*v2*v2*v2;
+	               old_dcurv[1]*3.0f*u2*u2*v2 +
+	               old_dcurv[2]*3.0f*u2*v2*v2 +
+	               old_dcurv[3]*v2*v2*v2;
 }
 
 
 // Given a curvature tensor, find principal directions and curvatures
 // Makes sure that pdir1 and pdir2 are perpendicular to normal
 void diagonalize_curv(const vec &old_u, const vec &old_v,
-		      float ku, float kuv, float kv,
-		      const vec &new_norm,
-		      vec &pdir1, vec &pdir2, float &k1, float &k2)
+                      float ku, float kuv, float kv,
+                      const vec &new_norm,
+                      vec &pdir1, vec &pdir2, float &k1, float &k2)
 {
 	vec r_old_u, r_old_v;
 	rot_coord_sys(old_u, old_v, new_norm, r_old_u, r_old_v);
@@ -146,7 +151,7 @@ void TriMesh::need_curvatures()
 	dprintf("Computing curvatures... ");
 
 	// Resize the arrays we'll be using
-	size_t nv = vertices.size(), nf = faces.size();
+	int nv = vertices.size(), nf = faces.size();
 	curv1.clear(); curv1.resize(nv); curv2.clear(); curv2.resize(nv);
 	pdir1.clear(); pdir1.resize(nv); pdir2.clear(); pdir2.resize(nv);
 	vector<float> curv12(nv);
@@ -154,17 +159,17 @@ void TriMesh::need_curvatures()
 	// Set up an initial coordinate system per vertex
 	for (int i = 0; i < nf; i++) {
 		pdir1[faces[i][0]] = vertices[faces[i][1]] -
-				     vertices[faces[i][0]];
+		                     vertices[faces[i][0]];
 		pdir1[faces[i][1]] = vertices[faces[i][2]] -
-				     vertices[faces[i][1]];
+		                     vertices[faces[i][1]];
 		pdir1[faces[i][2]] = vertices[faces[i][0]] -
-				     vertices[faces[i][2]];
+		                     vertices[faces[i][2]];
 	}
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
-		pdir1[i] = (pdir1[i] CROSS normals[i]);
+		pdir1[i] = pdir1[i] CROSS normals[i];
 		normalize(pdir1[i]);
-		pdir2[i] = (normals[i] CROSS pdir1[i]);
+		pdir2[i] = normals[i] CROSS pdir1[i];
 	}
 
 	// Compute curvature per-face
@@ -172,8 +177,8 @@ void TriMesh::need_curvatures()
 	for (int i = 0; i < nf; i++) {
 		// Edges
 		vec e[3] = { vertices[faces[i][2]] - vertices[faces[i][1]],
-			     vertices[faces[i][0]] - vertices[faces[i][2]],
-			     vertices[faces[i][1]] - vertices[faces[i][0]] };
+		             vertices[faces[i][0]] - vertices[faces[i][2]],
+		             vertices[faces[i][1]] - vertices[faces[i][0]] };
 
 		// N-T-B coordinate system per face
 		vec t = e[0];
@@ -191,11 +196,12 @@ void TriMesh::need_curvatures()
 			float v = e[j] DOT b;
 			w[0][0] += u*u;
 			w[0][1] += u*v;
-			//w[1][1] += v*v + u*u; 
-			//w[1][2] += u*v; 
 			w[2][2] += v*v;
-			vec dn = normals[faces[i][PREV(j)]] -
-				 normals[faces[i][NEXT(j)]];
+			// The below are computed once at the end of the loop
+			// w[1][1] += v*v + u*u;
+			// w[1][2] += u*v;
+			vec dn = normals[faces[i][PREV_MOD3(j)]] -
+			         normals[faces[i][NEXT_MOD3(j)]];
 			float dnu = dn DOT t;
 			float dnv = dn DOT b;
 			m[0] += dnu*u;
@@ -218,7 +224,7 @@ void TriMesh::need_curvatures()
 			int vj = faces[i][j];
 			float c1, c12, c2;
 			proj_curv(t, b, m[0], m[1], m[2],
-				  pdir1[vj], pdir2[vj], c1, c12, c2);
+			          pdir1[vj], pdir2[vj], c1, c12, c2);
 			float wt = cornerareas[i][j] / pointareas[vj];
 #pragma omp atomic
 			curv1[vj]  += wt * c1;
@@ -233,9 +239,9 @@ void TriMesh::need_curvatures()
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
 		diagonalize_curv(pdir1[i], pdir2[i],
-				 curv1[i], curv12[i], curv2[i],
-				 normals[i], pdir1[i], pdir2[i],
-				 curv1[i], curv2[i]);
+		                 curv1[i], curv12[i], curv2[i],
+		                 normals[i], pdir1[i], pdir2[i],
+		                 curv1[i], curv2[i]);
 	}
 	dprintf("Done.\n");
 }
@@ -251,7 +257,7 @@ void TriMesh::need_dcurv()
 	dprintf("Computing dcurv... ");
 
 	// Resize the arrays we'll be using
-	size_t nv = vertices.size(), nf = faces.size();
+	int nv = vertices.size(), nf = faces.size();
 	dcurv.clear(); dcurv.resize(nv);
 
 	// Compute dcurv per-face
@@ -259,8 +265,8 @@ void TriMesh::need_dcurv()
 	for (int i = 0; i < nf; i++) {
 		// Edges
 		vec e[3] = { vertices[faces[i][2]] - vertices[faces[i][1]],
-			     vertices[faces[i][0]] - vertices[faces[i][2]],
-			     vertices[faces[i][1]] - vertices[faces[i][0]] };
+		             vertices[faces[i][0]] - vertices[faces[i][2]],
+		             vertices[faces[i][1]] - vertices[faces[i][0]] };
 
 		// N-T-B coordinate system per face
 		vec t = e[0];
@@ -275,7 +281,7 @@ void TriMesh::need_dcurv()
 		for (int j = 0; j < 3; j++) {
 			int vj = faces[i][j];
 			proj_curv(pdir1[vj], pdir2[vj], curv1[vj], 0, curv2[vj],
-				  t, b, fcurv[j][0], fcurv[j][1], fcurv[j][2]);
+			          t, b, fcurv[j][0], fcurv[j][1], fcurv[j][2]);
 
 		}
 
@@ -284,17 +290,18 @@ void TriMesh::need_dcurv()
 		float w[4][4] = { {0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0} };
 		for (int j = 0; j < 3; j++) {
 			// Variation of curvature along each edge
-			vec dfcurv = fcurv[PREV(j)] - fcurv[NEXT(j)];
+			vec dfcurv = fcurv[PREV_MOD3(j)] - fcurv[NEXT_MOD3(j)];
 			float u = e[j] DOT t;
 			float v = e[j] DOT b;
 			float u2 = u*u, v2 = v*v, uv = u*v;
 			w[0][0] += u2;
 			w[0][1] += uv;
-			//w[1][1] += 2.0f*u2 + v2;
-			//w[1][2] += 2.0f*uv;
-			//w[2][2] += u2 + 2.0f*v2;
-			//w[2][3] += uv;
 			w[3][3] += v2;
+			// All the below are computed at the end of the loop
+			// w[1][1] += 2.0f*u2 + v2;
+			// w[1][2] += 2.0f*uv;
+			// w[2][2] += u2 + 2.0f*v2;
+			// w[2][3] += uv;
 			m[0] += u*dfcurv[0];
 			m[1] += v*dfcurv[0] + 2.0f*u*dfcurv[1];
 			m[2] += 2.0f*v*dfcurv[1] + u*dfcurv[2];
@@ -319,7 +326,7 @@ void TriMesh::need_dcurv()
 			int vj = faces[i][j];
 			Vec<4> this_vert_dcurv;
 			proj_dcurv(t, b, face_dcurv,
-				   pdir1[vj], pdir2[vj], this_vert_dcurv);
+			           pdir1[vj], pdir2[vj], this_vert_dcurv);
 			float wt = cornerareas[i][j] / pointareas[vj];
 			dcurv[vj] += wt * this_vert_dcurv;
 		}
@@ -328,4 +335,4 @@ void TriMesh::need_dcurv()
 	dprintf("Done.\n");
 }
 
-}; // namespace trimesh
+} // namespace trimesh
