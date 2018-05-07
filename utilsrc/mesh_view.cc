@@ -6,6 +6,10 @@ mesh_view.cc
 Simple viewer
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
 #include "XForm.h"
@@ -24,7 +28,6 @@ Simple viewer
 #endif
 using namespace std;
 using namespace trimesh;
-
 
 #include "shaders.inc"
 
