@@ -13,6 +13,11 @@ adaptive outlier rejection, and symmetric point-to-plane minimization.
 #include "lineqn.h"
 using namespace std;
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 
 #define INITIAL_ITERS 2
 #define MAX_ITERS 199
@@ -152,7 +157,7 @@ Grid::Grid(const vector<point> &pts)
 	                       -1,  0,  1, -1,  0,  1, -1,  0,  1,
 	                       -1,  0,  1, -1,  0,  1, -1,  0,  1 };
 #pragma omp parallel for
-	for (size_t i = 0; i < gsize; i++) {
+	for (ssize_t i = 0; i < gsize; i++) {
 		int x = i >> (2 * GRID_SHIFT);
 		int y = (i >> GRID_SHIFT) & GRID_MAX;
 		int z = i & GRID_MAX;
@@ -206,7 +211,7 @@ void compute_overlaps(TriMesh *mesh1, TriMesh *mesh2,
 #pragma omp parallel
 	{
 #pragma omp for nowait
-		for (size_t i = 0; i < nv1; i++) {
+		for (ssize_t i = 0; i < nv1; i++) {
 			point p = xf12 * mesh1->vertices[i];
 			if (g2 && !g2->overlaps(p))
 				continue;
@@ -219,7 +224,7 @@ void compute_overlaps(TriMesh *mesh1, TriMesh *mesh2,
 		}
 
 #pragma omp for
-		for (size_t i = 0; i < nv2; i++) {
+		for (ssize_t i = 0; i < nv2; i++) {
 			point p = xf21 * mesh2->vertices[i];
 			if (g1 && !g1->overlaps(p))
 				continue;
@@ -751,7 +756,7 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 #pragma omp parallel
 	{
 #pragma omp for nowait reduction(+ : sum_sampcdf1)
-		for (size_t i = 0; i < nv1; i++) {
+		for (ssize_t i = 0; i < nv1; i++) {
 			if (!weights1[i]) {
 				sampcdf1[i] = 0.0;
 				continue;
@@ -772,7 +777,7 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 		}
 
 #pragma omp for reduction(+ : sum_sampcdf2)
-		for (size_t i = 0; i < nv2; i++) {
+		for (ssize_t i = 0; i < nv2; i++) {
 			if (!weights2[i]) {
 				sampcdf2[i] = 0.0;
 				continue;
@@ -832,10 +837,10 @@ static void make_uniform_cdfs(
 #pragma omp parallel
 	{
 #pragma omp for nowait reduction(+ : sum_sampcdf1)
-		for (size_t i = 0; i < nv1; i++)
+		for (ssize_t i = 0; i < nv1; i++)
 			sum_sampcdf1 += (sampcdf1[i] = weights1[i]);
 #pragma omp for reduction(+ : sum_sampcdf2)
-		for (size_t i = 0; i < nv2; i++)
+		for (ssize_t i = 0; i < nv2; i++)
 			sum_sampcdf2 += (sampcdf2[i] = weights2[i]);
 	}
 
