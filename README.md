@@ -8,8 +8,9 @@ This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimes
  
 ## Getting started
  * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
-   * For **Windows**, Visual Studio Community Edition 2015 and 2017 solutions are in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
-   * For **Linux**, a makefile is provided. You might need additional packages. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
+   * For **Windows**, A Visual Studio Community Edition 2017 solutions is in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
+   * For **Linux**, a makefile is provided. You might need additional packages before you can build on your system. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
+   * I'm being told it builds on **OSX** using the provided makefile too, but I have no way to check. If you encounter problems, please, file an issue report :)
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
  * For inspiration on how to use the library, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`
 
