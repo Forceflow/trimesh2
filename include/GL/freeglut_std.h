@@ -72,7 +72,7 @@
 
         /* Link with Win32 static freeglut lib */
 #       if FREEGLUT_LIB_PRAGMAS
-#           pragma comment (lib, "freeglut_static.lib")
+#           pragma comment (lib, "gluit.lib")
 #       endif
 
 /* Windows shared library (DLL) */
