@@ -1,8 +1,6 @@
-# TriMesh2
+# TriMesh2 (2.13)
 
 A C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes.
-
-**Note:** I'm merging Trimesh 2.13 changes in the dev branch. Switch if you want more recent - but possibly buggy - code!
 
 ![trimesh2 logo](https://raw.githubusercontent.com/Forceflow/trimesh2/master/html/trimesh_logo.jpg)
 
@@ -11,7 +9,7 @@ This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimes
 ## Getting started
  * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
    * For **Windows**, Visual Studio Community Edition 2015 and 2017 solutions are in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
-   * For **Linux**, a makefile is provided. You might need additional packages. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev`.
+   * For **Linux**, a makefile is provided. You might need additional packages. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
  * For inspiration on how to use the library, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`
 
