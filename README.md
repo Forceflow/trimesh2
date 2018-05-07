@@ -42,7 +42,7 @@ The following utility programs are included:
 
 ## Fork Details
 
-The original TriMesh2 project was very Linux/GCC-oriented, and only had limited Win32 support (through MinGW compilation targets). The primary aim of this fork is to provide a stable MSVC and easy to build solution, for both x86 and x64 targets.
+The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited Win32 support (through MinGW compilation targets). The primary aim of this fork is to provide a stable MSVC and easy to build solution, for both x86 and x64 targets.
 
 Notable changes/additions to vanilla trimesh2
  * Fixes for MSVC 14.0 compilation
