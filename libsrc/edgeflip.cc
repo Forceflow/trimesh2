@@ -8,7 +8,6 @@ Optimally re-triangulate a mesh by doing edge flips
 
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
-#include <utility>
 #include <queue>
 using namespace std;
 #define dprintf TriMesh::dprintf
@@ -51,7 +50,7 @@ static float cosmaxangle(const point &v1, const point &v2, const point &v3)
    the Delaunay case, this isn't guaranteed to converge to the global optimum.
 */
 static float flip_benefit(const point &v1, const point &v2,
-			  const point &v3, const point &v4)
+                          const point &v3, const point &v4)
 {
 	vec n124 = (v4 - v2) CROSS (v1 - v2);
 	vec n234 = (v3 - v2) CROSS (v4 - v2);
@@ -74,10 +73,10 @@ static float flip_benefit(const TriMesh *mesh, int f, int e)
 		return 0;
 
 	int v2 = mesh->faces[f][e];
-	int v3 = mesh->faces[f][(e+1)%3];
-	int v1 = mesh->faces[f][(e+2)%3];
+	int v3 = mesh->faces[f][NEXT_MOD3(e)];
+	int v1 = mesh->faces[f][PREV_MOD3(e)];
 	int faei3 = mesh->faces[ae].indexof(v3);
-	if (mesh->across_edge[ae][(faei3+1)%3] != f) {
+	if (mesh->across_edge[ae][NEXT_MOD3(faei3)] != f) {
 		eprintf("Encountered error in flip_benefit()\n");
 		eprintf("f = %d: %d %d %d\n", f, v1, v2, v3);
 		eprintf("ae = %d\n", ae);
@@ -86,11 +85,11 @@ static float flip_benefit(const TriMesh *mesh, int f, int e)
 		eprintf("aeae = %d %d %d\n", mesh->across_edge[ae][0], mesh->across_edge[ae][1], mesh->across_edge[ae][2]);
 		return 0;	// Topological weirdness...
 	}
-	int v4 = mesh->faces[ae][(faei3+1)%3];
+	int v4 = mesh->faces[ae][NEXT_MOD3(faei3)];
 	if (v2 == v4)
 		return 0;
 	return flip_benefit(mesh->vertices[v1], mesh->vertices[v2],
-			    mesh->vertices[v3], mesh->vertices[v4]);
+	                    mesh->vertices[v3], mesh->vertices[v4]);
 }
 
 
@@ -101,26 +100,26 @@ static int edge_flip(TriMesh *mesh, int f1, int e)
 	int f2 = mesh->across_edge[f1][e];
 
 	int v2 = mesh->faces[f1][e];
-	int v3 = mesh->faces[f1][(e+1)%3];
+	int v3 = mesh->faces[f1][NEXT_MOD3(e)];
 	int f2i3 = mesh->faces[f2].indexof(v3);
-	int v4 = mesh->faces[f2][(f2i3+1)%3];
+	int v4 = mesh->faces[f2][NEXT_MOD3(f2i3)];
 
 	int ae14 = mesh->across_edge[f2][f2i3];
-	int ae23 = mesh->across_edge[f1][(e+2)%3];
+	int ae23 = mesh->across_edge[f1][PREV_MOD3(e)];
 
-	mesh->faces[f1][(e+1)%3] = v4;
-	mesh->faces[f2][(f2i3+2)%3] = v2;
+	mesh->faces[f1][NEXT_MOD3(e)] = v4;
+	mesh->faces[f2][PREV_MOD3(f2i3)] = v2;
 	mesh->across_edge[f1][e] = ae14;
-	mesh->across_edge[f1][(e+2)%3] = f2;
+	mesh->across_edge[f1][PREV_MOD3(e)] = f2;
 	mesh->across_edge[f2][f2i3] = f1;
-	mesh->across_edge[f2][(f2i3+1)%3] = ae23;
+	mesh->across_edge[f2][NEXT_MOD3(f2i3)] = ae23;
 
 	int ae14iv4 = (ae14 >= 0) ? mesh->faces[ae14].indexof(v4) : -1;
-	if (ae14iv4 >= 0 && mesh->across_edge[ae14][(ae14iv4+1)%3] == f2)
-		mesh->across_edge[ae14][(ae14iv4+1)%3] = f1;
+	if (ae14iv4 >= 0 && mesh->across_edge[ae14][NEXT_MOD3(ae14iv4)] == f2)
+		mesh->across_edge[ae14][NEXT_MOD3(ae14iv4)] = f1;
 	int ae23iv2 = (ae23 >= 0) ? mesh->faces[ae23].indexof(v2) : -1;
-	if (ae23iv2 >= 0 && mesh->across_edge[ae23][(ae23iv2+1)%3] == f1)
-		mesh->across_edge[ae23][(ae23iv2+1)%3] = f2;
+	if (ae23iv2 >= 0 && mesh->across_edge[ae23][NEXT_MOD3(ae23iv2)] == f1)
+		mesh->across_edge[ae23][NEXT_MOD3(ae23iv2)] = f2;
 
 	return f2;
 }
@@ -137,7 +136,7 @@ void edgeflip(TriMesh *mesh)
 
 	// Find edges that need to be flipped, and insert them into
 	// the to-do list
-	size_t nf = mesh->faces.size();
+	int nf = mesh->faces.size();
 	priority_queue<TriMeshEdgeWithBenefit> todo;
 	for (int i = 0; i < nf; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -174,4 +173,4 @@ void edgeflip(TriMesh *mesh)
 	dprintf("Done.\n");
 }
 
-}; // namespace trimesh
+} // namespace trimesh

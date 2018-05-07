@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 			}
 			xf = xf * tmp;
 		} else if (!strcmp(argv[i], "-xf") ||
-			   !strcmp(argv[i], "-xform")) {
+		           !strcmp(argv[i], "-xform")) {
 			i++;
 			if (!(i < argc)) {
 				fprintf(stderr, "\n-xform requires one argument\n\n");
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 			}
 			xf = xf * tmp;
 		} else if (!strcmp(argv[i], "-ixf") ||
-			   !strcmp(argv[i], "-ixform")) {
+		           !strcmp(argv[i], "-ixform")) {
 			i++;
 			if (!(i < argc)) {
 				fprintf(stderr, "\n-ixform requires one argument\n\n");
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 			}
 			xf = xf * inv(tmp);
 		} else if (!strcmp(argv[i], "-rot") ||
-			   !strcmp(argv[i], "-rotate")) {
+		           !strcmp(argv[i], "-rotate")) {
 			i += 4;
 			if (!(i < argc &&
 			      isanumber(argv[i]) && isanumber(argv[i-1]) &&
@@ -113,10 +113,10 @@ int main(int argc, char *argv[])
 				usage(argv[0]);
 			}
 			Vec<3,double> ax(atof(argv[i-2]), atof(argv[i-1]), atof(argv[i]));
-			double ang = M_PI / 180.0 * atof(argv[i-3]);
+			double ang = radians(atof(argv[i-3]));
 			xf = xf * xform::rot(ang, ax);
 		} else if (!strcmp(argv[i], "-q") ||
-			   !strcmp(argv[i], "-quat")) {
+		           !strcmp(argv[i], "-quat")) {
 			i += 4;
 			if (!(i < argc &&
 			      isanumber(argv[i]) && isanumber(argv[i-1]) &&
@@ -131,9 +131,9 @@ int main(int argc, char *argv[])
 			double ang = 2.0 * atan2(s2, c2);
 			xf = xf * xform::rot(ang, q[1], q[2], q[3]);
 		} else if (!strcmp(argv[i], "-v") ||
-			   !strcmp(argv[i], "-vq") ||
-			   !strcmp(argv[i], "-vquat") ||
-			   !strcmp(argv[i], "-vripquat")) {
+		           !strcmp(argv[i], "-vq") ||
+		           !strcmp(argv[i], "-vquat") ||
+		           !strcmp(argv[i], "-vripquat")) {
 			i += 4;
 			if (!(i < argc &&
 			      isanumber(argv[i]) && isanumber(argv[i-1]) &&
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 			double ang = 2.0 * atan2(s2, c2);
 			xf = xf * xform::rot(ang, q[1], q[2], q[3]);
 		} else if (!strcmp(argv[i], "-trans") ||
-			   !strcmp(argv[i], "-translate")) {
+		           !strcmp(argv[i], "-translate")) {
 			i += 3;
 			if (!(i < argc && isanumber(argv[i]) &&
 			      isanumber(argv[i-1]) && isanumber(argv[i-2]))) {
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 			Vec<3,double> t(atof(argv[i-2]), atof(argv[i-1]), atof(argv[i]));
 			xf = xf * xform::trans(t);
 		} else if (!strcmp(argv[i], "-inv") ||
-			   !strcmp(argv[i], "-invert")) {
+		           !strcmp(argv[i], "-invert")) {
 			invert(xf);
 		} else if (!strcmp(argv[i], "-print")) {
 			std::cout << xf;
@@ -172,53 +172,38 @@ int main(int argc, char *argv[])
 			xf.write(argv[i]);
 			autoprint = false;
 		} else if (!strcmp(argv[i], "-prot")) {
-			Vec<3,double> rotaxis(xf[6] - xf[9], xf[8] - xf[2], xf[1] - xf[4]);
-			double l = len(rotaxis);
-			if (l)
-				rotaxis /= l;
-			double tr1 = xf[0] + xf[5] + xf[10] - 1.0;
-			double rotamount = atan2(l, tr1);
-			double drotamount = rotamount * 180.0 / M_PI;
-			std::cout << "Rotation of " << rotamount << 
-				" (" << drotamount << " degrees) about " <<
-				rotaxis << std::endl;
-			Vec<3,double> trans(xf[12], xf[13], xf[14]);
+			double angle;
+			dvec3 axis;
+			decompose_rot(xf, angle, axis);
+			std::cout << "Rotation of " << angle <<
+				" (" << degrees(angle) << " degrees) about " <<
+				axis << std::endl;
+			dvec3 trans(xf[12], xf[13], xf[14]);
 			std::cout << "Translation of " << trans << std::endl;
-			double along = trans DOT rotaxis;
+			double along = trans DOT axis;
 			double perp = sqrt(len2(trans) - sqr(along));
 			std::cout << "  " << along << " along axis and " <<
 				perp << " perpendicular" << std::endl;
-			Vec<3,double> center;
-			if (l) {
-				double cothalf = (2.0 + tr1) / l;
-				Vec<3,double> cr = rotaxis CROSS trans;
-				center = 0.5 * (cothalf * cr - rotaxis CROSS cr);
-			}
-			std::cout << "  center = " << center << std::endl;
 			autoprint = false;
 		} else if (!strcmp(argv[i], "-pq")) {
-			Vec<3,double> rotaxis(xf[6] - xf[9], xf[8] - xf[2], xf[1] - xf[4]);
-			double l = len(rotaxis);
-			if (l)
-				rotaxis /= l;
-			double rotamount = atan2(l, xf[0] + xf[5] + xf[10] - 1.0);
-			rotaxis *= sin(0.5 * rotamount);
-			std::cout << cos(0.5 * rotamount) << " " <<
-				rotaxis[0] << " " << rotaxis[1] << " " <<
-				rotaxis[2] << "  " << xf[12] << " " <<
+			double angle;
+			dvec3 axis;
+			decompose_rot(xf, angle, axis);
+			axis *= sin(0.5 * angle);
+			std::cout << cos(0.5 * angle) << " " <<
+				axis[0] << " " << axis[1] << " " <<
+				axis[2] << "  " << xf[12] << " " <<
 				xf[13] << " " << xf[14] << std::endl;
 			autoprint = false;
 		} else if (!strcmp(argv[i], "-pv")) {
-			Vec<3,double> rotaxis(xf[6] - xf[9], xf[8] - xf[2], xf[1] - xf[4]);
-			double l = len(rotaxis);
-			if (l)
-				rotaxis /= l;
-			double rotamount = atan2(l, xf[0] + xf[5] + xf[10] - 1.0);
-			rotaxis *= -sin(0.5 * rotamount);
+			double angle;
+			dvec3 axis;
+			decompose_rot(xf, angle, axis);
+			axis *= sin(-0.5 * angle);
 			std::cout << "bmesh " << xf[12] << " " << xf[13] <<
-				" " << xf[14] <<  " " << rotaxis[0] << " " <<
-				rotaxis[1] << " " << rotaxis[2] << " " <<
-				cos(0.5 * rotamount) << std::endl;
+				" " << xf[14] <<  " " << axis[0] << " " <<
+				axis[1] << " " << axis[2] << " " <<
+				cos(0.5 * angle) << std::endl;
 			autoprint = false;
 		}
 	}
@@ -226,4 +211,3 @@ int main(int argc, char *argv[])
 	if (autoprint)
 		std::cout << xf;
 }
-

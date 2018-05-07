@@ -28,94 +28,191 @@
 #ifndef  FREEGLUT_INTERNAL_H
 #define  FREEGLUT_INTERNAL_H
 
+#include "freeglut_config.h"
+
 /* XXX Update these for each release! */
 #define  VERSION_MAJOR 2
-#define  VERSION_MINOR 2
-#define  VERSION_PATCH 0
+#define  VERSION_MINOR 8
+#define  VERSION_PATCH 1
 
-/*
- * Freeglut is meant to be available under all Unix/X11 and Win32 platforms.
+/* Freeglut is intended to function under all Unix/X11 and Win32 platforms. */
+/* XXX: Don't all MS-Windows compilers (except Cygwin) have _WIN32 defined?
+ * XXX: If so, remove the first set of defined()'s below.
  */
-#if defined(_WIN32_WCE)
-#   define  TARGET_HOST_UNIX_X11    0
-#   define  TARGET_HOST_WIN32       0
-#   define  TARGET_HOST_WINCE       1
-#elif defined(_MSC_VER) || defined(__CYGWIN__) || defined(__MINGW32__)
-#   define  TARGET_HOST_UNIX_X11    0
-#   define  TARGET_HOST_WIN32       1
-#   define  TARGET_HOST_WINCE       0
+#if !defined(TARGET_HOST_POSIX_X11) && !defined(TARGET_HOST_MS_WINDOWS) && !defined(TARGET_HOST_MAC_OSX) && !defined(TARGET_HOST_SOLARIS)
+#if defined(_MSC_VER) || defined(__WATCOMC__) || defined(__MINGW32__) \
+    || defined(_WIN32) || defined(_WIN32_WCE) \
+    || ( defined(__CYGWIN__) && defined(X_DISPLAY_MISSING) )
+#   define  TARGET_HOST_MS_WINDOWS 1
+
+#elif defined(__posix__) || defined(__unix__) || defined(__linux__) || defined(__sun)
+#   define  TARGET_HOST_POSIX_X11  1
+
+#elif defined(__APPLE__)
+/* This is a placeholder until we get native OSX support ironed out -- JFF 11/18/09 */
+#   define  TARGET_HOST_POSIX_X11  1
+/* #   define  TARGET_HOST_MAC_OSX    1 */
+
 #else
-#   define  TARGET_HOST_UNIX_X11    1
-#   define  TARGET_HOST_WIN32       0
-#   define  TARGET_HOST_WINCE       0
+#   error "Unrecognized target host!"
+
 #endif
+#endif
+
+/* Detect both SunPro and gcc compilers on Sun Solaris */
+#if defined (__SVR4) && defined (__sun)
+#   define TARGET_HOST_SOLARIS 1
+#endif
+
+#ifndef TARGET_HOST_MS_WINDOWS
+#   define  TARGET_HOST_MS_WINDOWS 0
+#endif
+
+#ifndef  TARGET_HOST_POSIX_X11
+#   define  TARGET_HOST_POSIX_X11  0
+#endif
+
+#ifndef  TARGET_HOST_MAC_OSX
+#   define  TARGET_HOST_MAC_OSX    0
+#endif
+
+#ifndef  TARGET_HOST_SOLARIS
+#   define  TARGET_HOST_SOLARIS    0
+#endif
+
+/* -- FIXED CONFIGURATION LIMITS ------------------------------------------- */
 
 #define  FREEGLUT_MAX_MENUS         3
 
-/*
- * Somehow all Win32 include headers depend on this one:
+/* -- PLATFORM-SPECIFIC INCLUDES ------------------------------------------- */
+
+/* All Win32 headers depend on the huge windows.h recursive include.
+ * Note: Lower-case header names are used, for best cross-platform
+ * compatibility.
  */
-#if TARGET_HOST_WIN32
-#include <windows.h>
-#include <windowsx.h>
-#include <mmsystem.h>
-#include <tchar.h>
+#if TARGET_HOST_MS_WINDOWS && !defined(_WIN32_WCE)
+#    include <windows.h>
+#    include <windowsx.h>
+#    include <mmsystem.h>
+/* CYGWIN does not have tchar.h, but has TEXT(x), defined in winnt.h. */
+#    ifndef __CYGWIN__
+#      include <tchar.h>
+#    else
+#      define _TEXT(x) TEXT(x)
+#      define _T(x)    TEXT(x)
+#    endif
+
+#elif TARGET_HOST_POSIX_X11
+#    include <GL/glx.h>
+#    include <X11/Xlib.h>
+#    include <X11/Xatom.h>
+#    include <X11/keysym.h>
+#    include <X11/extensions/XInput.h>
+#    ifdef HAVE_X11_EXTENSIONS_XF86VMODE_H
+#        include <X11/extensions/xf86vmode.h>
+#    endif
+#    ifdef HAVE_X11_EXTENSIONS_XRANDR_H
+#        include <X11/extensions/Xrandr.h>
+#    endif
+/* If GLX is too old, we will fail during runtime when multisampling
+   is requested, but at least freeglut compiles. */
+#    ifndef GLX_SAMPLE_BUFFERS
+#        define GLX_SAMPLE_BUFFERS 0x80A8
+#    endif
+#    ifndef GLX_SAMPLES
+#        define GLX_SAMPLES 0x80A9
+#    endif
+
 #endif
 
-#if defined(_MSC_VER)
-#define strdup   _strdup
-#endif
-
-/*
- * Those files should be available on every platform.
- */
-#include <GL/gl.h>
-#include <GL/glu.h>
+/* These files should be available on every platform. */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <stdarg.h>
-#if TARGET_HOST_UNIX_X11
-#include <unistd.h>
-#include <sys/time.h>
+
+/* These are included based on autoconf directives. */
+#ifdef HAVE_SYS_TYPES_H
+#    include <sys/types.h>
+#    include <sys/stat.h>
+#    include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#    include <unistd.h>
+#endif
+#ifdef TIME_WITH_SYS_TIME
+#    include <sys/time.h>
+#    include <time.h>
+#elif defined(HAVE_SYS_TIME_H)
+#    include <sys/time.h>
+#else
+#    include <time.h>
 #endif
 
-/*
- * The system-dependant include files should go here:
- */
-#if TARGET_HOST_UNIX_X11
-    #include <GL/glx.h>
-    #include <X11/Xlib.h>
-    #include <X11/Xatom.h>
-    #include <X11/keysym.h>
+/* -- AUTOCONF HACKS --------------------------------------------------------*/
 
-    #ifdef HAVE_X11_EXTENSIONS_XF86VMODE_H
-    #include <X11/extensions/xf86vmode.h>
-    #endif
+/* XXX: Update autoconf to avoid these.
+ * XXX: Are non-POSIX platforms intended not to use autoconf?
+ * If so, perhaps there should be a config_guess.h for them. Alternatively,
+ * config guesses could be placed above, just after the config.h exclusion.
+ */
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#    define HAVE_USB_JS 1
+#    if defined(__NetBSD__) || ( defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#        define HAVE_USBHID_H 1
+#    endif
 #endif
 
-/*
- * Microsoft VisualC++ 5.0's <math.h> does not define the PI
- */
+#if TARGET_HOST_MS_WINDOWS
+#    define  HAVE_VFPRINTF 1
+#endif
+
+/* MinGW may lack a prototype for ChangeDisplaySettingsEx() (depending on the version?) */
+#if TARGET_HOST_MS_WINDOWS && !defined(ChangeDisplaySettingsEx)
+LONG WINAPI ChangeDisplaySettingsExA(LPCSTR,LPDEVMODEA,HWND,DWORD,LPVOID);
+LONG WINAPI ChangeDisplaySettingsExW(LPCWSTR,LPDEVMODEW,HWND,DWORD,LPVOID);
+#    ifdef UNICODE
+#        define ChangeDisplaySettingsEx ChangeDisplaySettingsExW
+#    else
+#        define ChangeDisplaySettingsEx ChangeDisplaySettingsExA
+#    endif
+#endif
+
+#if defined(_MSC_VER) || defined(__WATCOMC__)
+/* strdup() is non-standard, for all but POSIX-2001 */
+#define strdup   _strdup
+#endif
+
+/* M_PI is non-standard (defined by BSD, not ISO-C) */
 #ifndef M_PI
 #    define  M_PI  3.14159265358979323846
 #endif
 
-#ifndef TRUE
-#    define  TRUE  1
+#ifdef HAVE_STDBOOL_H
+#    include <stdbool.h>
+#    ifndef TRUE
+#        define TRUE true
+#    endif
+#    ifndef FALSE
+#        define FALSE false
+#    endif
+#else
+#    ifndef TRUE
+#        define  TRUE  1
+#    endif
+#    ifndef FALSE
+#        define  FALSE  0
+#    endif
 #endif
 
-#ifndef FALSE
-#    define  FALSE  0
-#endif
+/* General defines */
+
+#define INVALID_MODIFIERS 0xffffffffu
 
 /* -- GLOBAL TYPE DEFINITIONS ---------------------------------------------- */
 
-/*
- * Freeglut callbacks type definitions
- */
+/* Freeglut callbacks type definitions */
 typedef void (* FGCBDisplay       )( void );
 typedef void (* FGCBReshape       )( int, int );
 typedef void (* FGCBVisibility    )( int );
@@ -141,23 +238,26 @@ typedef void (* FGCBTabletMotion  )( int, int );
 typedef void (* FGCBTabletButton  )( int, int, int, int );
 typedef void (* FGCBDestroy       )( void );
 
-/*
- * The global callbacks type definitions
- */
+typedef void (* FGCBMultiEntry   )( int, int );
+typedef void (* FGCBMultiButton  )( int, int, int, int, int );
+typedef void (* FGCBMultiMotion  )( int, int, int );
+typedef void (* FGCBMultiPassive )( int, int, int );
+
+/* The global callbacks type definitions */
 typedef void (* FGCBIdle          )( void );
 typedef void (* FGCBTimer         )( int );
 typedef void (* FGCBMenuState     )( int );
 typedef void (* FGCBMenuStatus    )( int, int, int );
 
-/*
- * The callback used when creating/using menus
- */
+/* The callback used when creating/using menus */
 typedef void (* FGCBMenu          )( int );
 
+/* The FreeGLUT error/warning handler type definition */
+typedef void (* FGError           ) ( const char *fmt, va_list ap);
+typedef void (* FGWarning         ) ( const char *fmt, va_list ap);
 
-/*
- * A list structure
- */
+
+/* A list structure */
 typedef struct tagSFG_List SFG_List;
 struct tagSFG_List
 {
@@ -165,9 +265,7 @@ struct tagSFG_List
     void *Last;
 };
 
-/*
- * A list node structure
- */
+/* A list node structure */
 typedef struct tagSFG_Node SFG_Node;
 struct tagSFG_Node
 {
@@ -175,28 +273,12 @@ struct tagSFG_Node
     void *Prev;
 };
 
-/*
- * A helper structure holding two ints and a boolean
- */
+/* A helper structure holding two ints and a boolean */
 typedef struct tagSFG_XYUse SFG_XYUse;
 struct tagSFG_XYUse
 {
     GLint           X, Y;               /* The two integers...               */
     GLboolean       Use;                /* ...and a single boolean.          */
-};
-
-/*
- * A helper structure holding a timeval and a boolean
- */
-typedef struct tagSFG_Time SFG_Time;
-struct tagSFG_Time
-{
-#if TARGET_HOST_WIN32
-    DWORD Value;
-#else
-    struct timeval  Value;
-#endif
-    GLboolean       Set;
 };
 
 /*
@@ -210,9 +292,7 @@ typedef enum
   GLUT_EXEC_STATE_STOP
 } fgExecutionState ;
 
-/*
- * This structure holds different freeglut settings
- */
+/* This structure holds different freeglut settings */
 typedef struct tagSFG_State SFG_State;
 struct tagSFG_State
 {
@@ -231,13 +311,13 @@ struct tagSFG_State
     GLboolean        XSyncSwitch;          /* X11 sync protocol switch       */
 
     int              KeyRepeat;            /* Global key repeat mode.        */
-    int              Modifiers;            /* Current ALT/SHIFT/CTRL state   */
+    unsigned         Modifiers;            /* Current ALT/SHIFT/CTRL state   */
 
     GLuint           FPSInterval;          /* Interval between FPS printfs   */
     GLuint           SwapCount;            /* Count of glutSwapBuffer calls  */
     GLuint           SwapTime;             /* Time of last SwapBuffers       */
 
-    SFG_Time         Time;                 /* Time that glutInit was called  */
+    unsigned long    Time;                 /* Time that glutInit was called  */
     SFG_List         Timers;               /* The freeglut timer hooks       */
     SFG_List         FreeTimers;           /* The unused timer hooks         */
 
@@ -255,22 +335,45 @@ struct tagSFG_State
 
     fgExecutionState ExecState;           /* Used for GLUT termination       */
     char            *ProgramName;         /* Name of the invoking program    */
+    GLboolean        JoysticksInitialised;  /* Only initialize if application calls for them */
+    int              NumActiveJoysticks;    /* Number of active joysticks -- if zero, don't poll joysticks */
+    GLboolean        InputDevsInitialised;  /* Only initialize if application calls for them */
+
+	int              MouseWheelTicks;      /* Number of ticks the mouse wheel has turned */
+
+    int              AuxiliaryBufferNumber;  /* Number of auxiliary buffers */
+    int              SampleNumber;         /*  Number of samples per pixel  */
+
+    GLboolean        SkipStaleMotion;      /* skip stale motion events */
+
+    int              MajorVersion;         /* Major OpenGL context version  */
+    int              MinorVersion;         /* Minor OpenGL context version  */
+    int              ContextFlags;         /* OpenGL context flags          */
+    int              ContextProfile;       /* OpenGL context profile        */
+    FGError          ErrorFunc;            /* User defined error handler    */
+    FGWarning        WarningFunc;          /* User defined warning handler  */
 };
 
-/*
- * The structure used by display initialization in freeglut_init.c
- */
+/* The structure used by display initialization in freeglut_init.c */
 typedef struct tagSFG_Display SFG_Display;
 struct tagSFG_Display
 {
-#if TARGET_HOST_UNIX_X11
+#if TARGET_HOST_POSIX_X11
     Display*        Display;            /* The display we are being run in.  */
     int             Screen;             /* The screen we are about to use.   */
     Window          RootWindow;         /* The screen's root window.         */
     int             Connection;         /* The display's connection number   */
     Atom            DeleteWindow;       /* The window deletion atom          */
+    Atom            State;              /* The state atom                    */
+    Atom            StateFullScreen;    /* The full screen atom              */
 
-#ifdef X_XF86VidModeGetModeLine
+#ifdef HAVE_X11_EXTENSIONS_XRANDR_H
+    int prev_xsz, prev_ysz;
+    int prev_refresh;
+    int prev_size_valid;
+#endif	/* HAVE_X11_EXTENSIONS_XRANDR_H */
+
+#ifdef HAVE_X11_EXTENSIONS_XF86VMODE_H
     /*
      * XF86VidMode may be compilable even if it fails at runtime.  Therefore,
      * the validity of the VidMode has to be tracked
@@ -280,14 +383,15 @@ struct tagSFG_Display
     int             DisplayModeClock;   /* The display mode's refresh rate   */
     int             DisplayViewPortX;   /* saved X location of the viewport  */
     int             DisplayViewPortY;   /* saved Y location of the viewport  */
+#endif /* HAVE_X11_EXTENSIONS_XF86VMODE_H */
+
     int             DisplayPointerX;    /* saved X location of the pointer   */
     int             DisplayPointerY;    /* saved Y location of the pointer   */
 
-#endif
-
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
-    HINSTANCE        Instance;          /* The application's instance        */
+#elif TARGET_HOST_MS_WINDOWS
+    HINSTANCE       Instance;           /* The application's instance        */
     DEVMODE         DisplayMode;        /* Desktop's display settings        */
+    char           *DisplayName;        /* Display name for multi display support*/ 
 
 #endif
 
@@ -298,9 +402,7 @@ struct tagSFG_Display
 };
 
 
-/*
- * The user can create any number of timer hooks
- */
+/* The user can create any number of timer hooks */
 typedef struct tagSFG_Timer SFG_Timer;
 struct tagSFG_Timer
 {
@@ -314,12 +416,12 @@ struct tagSFG_Timer
  * Make "freeglut" window handle and context types so that we don't need so
  * much conditionally-compiled code later in the library.
  */
-#if TARGET_HOST_UNIX_X11
+#if TARGET_HOST_POSIX_X11
 
 typedef Window     SFG_WindowHandleType ;
 typedef GLXContext SFG_WindowContextType ;
 
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
+#elif TARGET_HOST_MS_WINDOWS
 
 typedef HWND    SFG_WindowHandleType ;
 typedef HGLRC   SFG_WindowContextType ;
@@ -336,27 +438,29 @@ struct tagSFG_Context
     SFG_WindowHandleType  Handle;    /* The window's handle                 */
     SFG_WindowContextType Context;   /* The window's OpenGL/WGL context     */
 
-#if TARGET_HOST_UNIX_X11
-    XVisualInfo*    VisualInfo;      /* The window's visual information     */
-    Pixmap          Pixmap;          /* Used for offscreen rendering        */
-    /* GLXPixmap      GLXPixMap; */  /* Used for offscreen rendering        */
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
+#if TARGET_HOST_POSIX_X11
+    GLXFBConfig*    FBConfig;        /* The window's FBConfig               */
+#elif TARGET_HOST_MS_WINDOWS
     HDC             Device;          /* The window's device context         */
 #endif
 
     int             DoubleBuffered;  /* Treat the window as double-buffered */
 };
 
-/*
- * Window's state description. This structure should be kept portable.
- */
+/* Window's state description. This structure should be kept portable. */
 typedef struct tagSFG_WindowState SFG_WindowState;
 struct tagSFG_WindowState
 {
+    /* Note that on Windows, sizes always refer to the client area, thus without the window decorations */
     int             Width;              /* Window's width in pixels          */
     int             Height;             /* The same about the height         */
+#if TARGET_HOST_POSIX_X11
     int             OldWidth;           /* Window width from before a resize */
     int             OldHeight;          /*   "    height  "    "    "   "    */
+#elif TARGET_HOST_MS_WINDOWS
+    RECT            OldRect;            /* window rect - stored before the window is made fullscreen */
+    DWORD           OldStyle;           /* window style - stored before the window is made fullscreen */
+#endif
 
     GLboolean       Redisplay;          /* Do we have to redisplay?          */
     GLboolean       Visible;            /* Is the window visible now         */
@@ -371,18 +475,27 @@ struct tagSFG_WindowState
     GLboolean       IgnoreKeyRepeat;    /* Whether to ignore key repeat.     */
     GLboolean       KeyRepeating;       /* Currently in repeat mode          */
 
-    GLboolean       IsGameMode;         /* Is this the game mode window?     */
     GLboolean       NeedToResize;       /* Do we need to resize the window?  */
+
+    GLboolean       IsFullscreen;       /* is the window fullscreen? */
 };
+
+
+/*
+ * A generic function pointer.  We should really use the GLUTproc type
+ * defined in freeglut_ext.h, but if we include that header in this file
+ * a bunch of other stuff (font-related) blows up!
+ */
+typedef void (*SFG_Proc)();
 
 
 /*
  * SET_WCB() is used as:
  *
- *     SET_WCB( window, Visibility, func );
+ *     SET_WCB( window, cbname, func );
  *
  * ...where {window} is the freeglut window to set the callback,
- *          {Visibility} is the window-specific callback to set,
+ *          {cbname} is the window-specific callback to set,
  *          {func} is a function-pointer.
  *
  * Originally, {FETCH_WCB( ... ) = func} was rather sloppily used,
@@ -396,36 +509,36 @@ struct tagSFG_WindowState
 #define SET_WCB(window,cbname,func)                            \
 do                                                             \
 {                                                              \
-    if( FETCH_WCB( window, cbname ) != func )                  \
-        (((window).CallBacks[CB_ ## cbname]) = (void *) func); \
-} while( 0 )                                                   \
+    if( FETCH_WCB( window, cbname ) != (SFG_Proc)(func) )      \
+        (((window).CallBacks[CB_ ## cbname]) = (SFG_Proc)(func)); \
+} while( 0 )
 
 /*
  * FETCH_WCB() is used as:
  *
- *     FETCH_WCB( window, Visibility );
+ *     FETCH_WCB( window, cbname );
  *
  * ...where {window} is the freeglut window to fetch the callback from,
- *          {Visibility} is the window-specific callback to fetch.
+ *          {cbname} is the window-specific callback to fetch.
  *
  * The result is correctly type-cast to the callback function pointer
  * type.
  */
 #define FETCH_WCB(window,cbname) \
-    ((FGCB ## cbname)((window).CallBacks[CB_ ## cbname]))
+    ((window).CallBacks[CB_ ## cbname])
 
 /*
  * INVOKE_WCB() is used as:
  *
- *     INVOKE_WCB( window, Visibility, ( status ) );
+ *     INVOKE_WCB( window, cbname, ( arg_list ) );
  *
  * ...where {window} is the freeglut window,
- *          {Visibility} is the window-specific callback,
- *          {(status)} is the parameter list.
+ *          {cbname} is the window-specific callback to be invoked,
+ *          {(arg_list)} is the parameter list.
  *
  * The callback is invoked as:
  *
- *    callback( status );
+ *    callback( arg_list );
  *
  * ...so the parentheses are REQUIRED in the {arg_list}.
  *
@@ -433,15 +546,28 @@ do                                                             \
  * current window.
  *
  */
+#if TARGET_HOST_MS_WINDOWS && !defined(_WIN32_WCE) /* FIXME: also WinCE? */
+#define INVOKE_WCB(window,cbname,arg_list)    \
+do                                            \
+{                                             \
+    if( FETCH_WCB( window, cbname ) )         \
+    {                                         \
+        FGCB ## cbname func = (FGCB ## cbname)(FETCH_WCB( window, cbname )); \
+        fgSetWindow( &window );               \
+        func arg_list;                        \
+    }                                         \
+} while( 0 )
+#else
 #define INVOKE_WCB(window,cbname,arg_list)    \
 do                                            \
 {                                             \
     if( FETCH_WCB( window, cbname ) )         \
     {                                         \
         fgSetWindow( &window );               \
-        FETCH_WCB( window, cbname ) arg_list; \
+        ((FGCB ## cbname)FETCH_WCB( window, cbname )) arg_list; \
     }                                         \
 } while( 0 )
+#endif
 
 /*
  * The window callbacks the user can supply us with. Should be kept portable.
@@ -477,12 +603,18 @@ enum
     CB_Joystick,
     CB_Destroy,
 
+    /* MPX-related */
+    CB_MultiEntry,
+    CB_MultiButton,
+    CB_MultiMotion,
+    CB_MultiPassive,
+
     /* Presently ignored */
     CB_Select,
     CB_OverlayDisplay,
-    CB_SpaceMotion,
-    CB_SpaceRotation,
-    CB_SpaceButton,
+    CB_SpaceMotion,     /* presently implemented only on UNIX/X11 */
+    CB_SpaceRotation,   /* presently implemented only on UNIX/X11 */
+    CB_SpaceButton,     /* presently implemented only on UNIX/X11 */
     CB_Dials,
     CB_ButtonBox,
     CB_TabletMotion,
@@ -493,22 +625,14 @@ enum
 };
 
 
-/*
- * This structure holds the OpenGL rendering context for all the menu windows
- */
+/* This structure holds the OpenGL rendering context for all the menu windows */
 typedef struct tagSFG_MenuContext SFG_MenuContext;
 struct tagSFG_MenuContext
 {
-#if TARGET_HOST_UNIX_X11
-    XVisualInfo*        VisualInfo;       /* The window's visual information */
-#endif
-
-    SFG_WindowContextType Context;        /* The menu window's WGL context   */
+    SFG_WindowContextType MContext;       /* The menu window's WGL context   */
 };
 
-/*
- * This structure describes a menu
- */
+/* This structure describes a menu */
 typedef struct tagSFG_Window SFG_Window;
 typedef struct tagSFG_MenuEntry SFG_MenuEntry;
 typedef struct tagSFG_Menu SFG_Menu;
@@ -527,12 +651,10 @@ struct tagSFG_Menu
 
     SFG_MenuEntry      *ActiveEntry;  /* Currently active entry in the menu  */
     SFG_Window         *Window;       /* Window for menu                     */
-    SFG_Window         *ParentWindow; /* Window in which the menu is defined */
+    SFG_Window         *ParentWindow; /* Window in which the menu is invoked */
 };
 
-/*
- * This is a menu entry
- */
+/* This is a menu entry */
 struct tagSFG_MenuEntry
 {
     SFG_Node            Node;
@@ -547,6 +669,8 @@ struct tagSFG_MenuEntry
 /*
  * A window, making part of freeglut windows hierarchy.
  * Should be kept portable.
+ *
+ * NOTE that ActiveMenu is set to menu itself if the window is a menu.
  */
 struct tagSFG_Window
 {
@@ -555,7 +679,7 @@ struct tagSFG_Window
 
     SFG_Context         Window;                 /* Window and OpenGL context */
     SFG_WindowState     State;                  /* The window state          */
-    void         *CallBacks[ TOTAL_CALLBACKS ]; /* Array of window callbacks */
+    SFG_Proc            CallBacks[ TOTAL_CALLBACKS ]; /* Array of window callbacks */
     void               *UserData ;              /* For use by user           */
 
     SFG_Menu*       Menu[ FREEGLUT_MAX_MENUS ]; /* Menus appended to window  */
@@ -568,9 +692,7 @@ struct tagSFG_Window
 };
 
 
-/*
- * A linked list structure of windows
- */
+/* A linked list structure of windows */
 typedef struct tagSFG_WindowList SFG_WindowList ;
 struct tagSFG_WindowList
 {
@@ -578,25 +700,23 @@ struct tagSFG_WindowList
     SFG_Window *window ;
 };
 
-/*
- * This holds information about all the windows, menus etc.
- */
+/* This holds information about all the windows, menus etc. */
 typedef struct tagSFG_Structure SFG_Structure;
 struct tagSFG_Structure
 {
-    SFG_List        Windows;      /* The global windows list            */
-    SFG_List        Menus;        /* The global menus list              */
+    SFG_List        Windows;         /* The global windows list            */
+    SFG_List        Menus;           /* The global menus list              */
     SFG_List        WindowsToDestroy;
 
-    SFG_Window*     Window;       /* The currently active win.          */
-    SFG_Menu*       Menu;         /* Same, but menu...                  */
+    SFG_Window*     CurrentWindow;   /* The currently set window          */
+    SFG_Menu*       CurrentMenu;     /* Same, but menu...                 */
 
-    SFG_MenuContext* MenuContext; /* OpenGL rendering context for menus */
+    SFG_MenuContext* MenuContext;    /* OpenGL rendering context for menus */
 
-    SFG_Window*      GameMode;    /* The game mode window               */
+    SFG_Window*      GameModeWindow; /* The game mode window               */
 
-    int              WindowID;    /* The new current window ID          */
-    int              MenuID;      /* The new current menu ID            */
+    int              WindowID;       /* The new current window ID          */
+    int              MenuID;         /* The new current menu ID            */
 };
 
 /*
@@ -611,11 +731,10 @@ struct tagSFG_Enumerator
     GLboolean   found;                          /* Used to terminate search  */
     void*       data;                           /* Custom data pointer       */
 };
-typedef void (* FGCBenumerator  )( SFG_Window *, SFG_Enumerator * );
+typedef void (* FGCBWindowEnumerator  )( SFG_Window *, SFG_Enumerator * );
+typedef void (* FGCBMenuEnumerator  )( SFG_Menu *, SFG_Enumerator * );
 
-/*
- * The bitmap font structure
- */
+/* The bitmap font structure */
 typedef struct tagSFG_Font SFG_Font;
 struct tagSFG_Font
 {
@@ -627,9 +746,7 @@ struct tagSFG_Font
     float           xorig, yorig; /* Relative origin of the character */
 };
 
-/*
- * The stroke font structures
- */
+/* The stroke font structures */
 
 typedef struct tagSFG_StrokeVertex SFG_StrokeVertex;
 struct tagSFG_StrokeVertex
@@ -663,19 +780,13 @@ struct tagSFG_StrokeFont
 
 /* -- GLOBAL VARIABLES EXPORTS --------------------------------------------- */
 
-/*
- * Freeglut display related stuff (initialized once per session)
- */
+/* Freeglut display related stuff (initialized once per session) */
 extern SFG_Display fgDisplay;
 
-/*
- * Freeglut internal structure
- */
+/* Freeglut internal structure */
 extern SFG_Structure fgStructure;
 
-/*
- * The current freeglut settings
- */
+/* The current freeglut settings */
 extern SFG_State fgState;
 
 
@@ -685,7 +796,26 @@ extern SFG_State fgState;
  * A call to this function makes us sure that the Display and Structure
  * subsystems have been properly initialized and are ready to be used
  */
-#define  freeglut_assert_ready  assert( fgState.Initialised );
+#define  FREEGLUT_EXIT_IF_NOT_INITIALISED( string )               \
+  if ( ! fgState.Initialised )                                    \
+  {                                                               \
+    fgError ( " ERROR:  Function <%s> called"                     \
+              " without first calling 'glutInit'.", (string) ) ;  \
+  }
+
+#define  FREEGLUT_INTERNAL_ERROR_EXIT_IF_NOT_INITIALISED( string )  \
+  if ( ! fgState.Initialised )                                      \
+  {                                                                 \
+    fgError ( " ERROR:  Internal <%s> function called"              \
+              " without first calling 'glutInit'.", (string) ) ;    \
+  }
+
+#define  FREEGLUT_INTERNAL_ERROR_EXIT( cond, string, function )  \
+  if ( ! ( cond ) )                                              \
+  {                                                              \
+    fgError ( " ERROR:  Internal error <%s> in function %s",     \
+              (string), (function) ) ;                           \
+  }
 
 /*
  * Following definitions are somewhat similiar to GLib's,
@@ -700,17 +830,20 @@ extern SFG_State fgState;
 
 /*
  * A call to those macros assures us that there is a current
- * window and menu set, respectively:
+ * window set, respectively:
  */
-#define  freeglut_assert_window assert( fgStructure.Window != NULL );
-#define  freeglut_assert_menu   assert( fgStructure.Menu != NULL );
+#define  FREEGLUT_EXIT_IF_NO_WINDOW( string )                               \
+  if ( ! fgStructure.CurrentWindow &&                                       \
+       ( fgState.ActionOnWindowClose != GLUT_ACTION_CONTINUE_EXECUTION ) )  \
+  {                                                                         \
+    fgError ( " ERROR:  Function <%s> called"                               \
+              " with no current window defined.", (string) ) ;              \
+  }
 
 /*
- * The initialize and deinitialize functions get called on glutInit()
- * and glutMainLoop() end respectively. They should create/clean up
+ * The deinitialize function gets called on glutMainLoop() end. It should clean up
  * everything inside of the freeglut
  */
-void fgInitialize( const char* displayName );
 void fgDeinitialize( void );
 
 /*
@@ -722,19 +855,16 @@ void fgDeinitialize( void );
 void fgCreateStructure( void );
 void fgDestroyStructure( void );
 
-/*
- * A helper function to check if a display mode is possible to use
- */
-#if TARGET_HOST_UNIX_X11
-XVisualInfo* fgChooseVisual( void );
+/* A helper function to check if a display mode is possible to use */
+#if TARGET_HOST_POSIX_X11
+GLXFBConfig* fgChooseFBConfig( int* numcfgs );
 #endif
 
-/*
- * The window procedure for Win32 events handling
- */
-#if TARGET_HOST_WIN32 || TARGET_HOST_WINCE
+/* The window procedure for Win32 events handling */
+#if TARGET_HOST_MS_WINDOWS
 LRESULT CALLBACK fgWindowProc( HWND hWnd, UINT uMsg,
                                WPARAM wParam, LPARAM lParam );
+void fgNewWGLCreateContext( SFG_Window* window );
 GLboolean fgSetupPixelFormat( SFG_Window* window, GLboolean checkOnly,
                               unsigned char layer_type );
 #endif
@@ -745,30 +875,49 @@ GLboolean fgSetupPixelFormat( SFG_Window* window, GLboolean checkOnly,
  * Defined in freeglut_structure.c, freeglut_window.c.
  */
 SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title,
-                            int x, int y, int w, int h,
+                            GLboolean positionUse, int x, int y,
+                            GLboolean sizeUse, int w, int h,
                             GLboolean gameMode, GLboolean isMenu );
 void        fgSetWindow ( SFG_Window *window );
 void        fgOpenWindow( SFG_Window* window, const char* title,
-                          int x, int y, int w, int h, GLboolean gameMode,
-                          GLboolean isSubWindow );
+                          GLboolean positionUse, int x, int y,
+                          GLboolean sizeUse, int w, int h,
+                          GLboolean gameMode, GLboolean isSubWindow );
 void        fgCloseWindow( SFG_Window* window );
 void        fgAddToWindowDestroyList ( SFG_Window* window );
 void        fgCloseWindows ();
 void        fgDestroyWindow( SFG_Window* window );
-void        fgClearCallBacks( SFG_Window *window );
 
-/*
- * Menu creation and destruction. Defined in freeglut_structure.c
- */
+/* Menu creation and destruction. Defined in freeglut_structure.c */
 SFG_Menu*   fgCreateMenu( FGCBMenu menuCallback );
 void        fgDestroyMenu( SFG_Menu* menu );
 
-/*
- * Joystick device management functions, defined in freeglut_joystick.c
- */
-void        fgJoystickInit( int ident );
+/* Joystick device management functions, defined in freeglut_joystick.c */
+int         fgJoystickDetect( void );
+void        fgInitialiseJoysticks( void );
 void        fgJoystickClose( void );
 void        fgJoystickPollWindow( SFG_Window* window );
+
+/* InputDevice Initialisation and Closure */
+int         fgInputDeviceDetect( void );
+void        fgInitialiseInputDevices( void );
+void        fgInputDeviceClose( void );
+
+/* spaceball device functions, defined in freeglut_spaceball.c */
+void        fgInitialiseSpaceball( void );
+void        fgSpaceballClose( void );
+void        fgSpaceballSetWindow( SFG_Window *window );
+
+int         fgHasSpaceball( void );
+int         fgSpaceballNumButtons( void );
+
+#if TARGET_HOST_POSIX_X11
+int         fgIsSpaceballXEvent( const XEvent *ev );
+void        fgSpaceballHandleXEvent( const XEvent *ev );
+#endif
+
+/* Setting the cursor for a given window */
+void fgSetCursor ( SFG_Window *window, int cursorID );
 
 /*
  * Helper function to enumerate through all registered windows
@@ -782,9 +931,22 @@ void        fgJoystickPollWindow( SFG_Window* window );
  * and userData is the a custom user-supplied pointer. Functions
  * are defined and exported from freeglut_structure.c file.
  */
-void fgEnumWindows( FGCBenumerator enumCallback, SFG_Enumerator* enumerator );
-void fgEnumSubWindows( SFG_Window* window, FGCBenumerator enumCallback,
+void fgEnumWindows( FGCBWindowEnumerator enumCallback, SFG_Enumerator* enumerator );
+void fgEnumSubWindows( SFG_Window* window, FGCBWindowEnumerator enumCallback,
                        SFG_Enumerator* enumerator );
+
+#if TARGET_HOST_MS_WINDOWS
+/* 
+ * Helper functions for getting client area from the window rect
+ * and the window rect from the client area given the style of the window
+ * (or a valid window pointer from which the style can be queried).
+ */
+void fghGetDefaultWindowStyle(DWORD *flags);
+void fghGetStyleFromWindow( const SFG_Window *window, DWORD *windowStyle, DWORD *windowExStyle );
+void fghComputeWindowRectFromClientArea_UseStyle( RECT *clientRect, const DWORD windowStyle, const DWORD windowExStyle, BOOL posIsOutside );
+void fghComputeWindowRectFromClientArea_QueryWindow( RECT *clientRect, const SFG_Window *window, BOOL posIsOutside );
+void fghGetClientArea( RECT *clientRect, const SFG_Window *window, BOOL wantPosOutside );
+#endif
 
 /*
  * fgWindowByHandle returns a (SFG_Window *) value pointing to the
@@ -807,14 +969,19 @@ SFG_Window* fgWindowByID( int windowID );
 SFG_Menu* fgMenuByID( int menuID );
 
 /*
+ * Returns active menu, if any. Assumption: only one menu active throughout application at any one time.
+ * This is easier than fgWindowByXXX as all menus are placed in one doubly linked list...
+ */
+SFG_Menu* fgGetActiveMenu( );
+
+/*
  * The menu activation and deactivation the code. This is the meat
  * of the menu user interface handling code...
  */
-void fgActivateMenu( SFG_Window* window, int button );
-void fgExecuteMenuCallback( SFG_Menu* menu );
-GLboolean fgCheckActiveMenu ( SFG_Window *window, SFG_Menu *menu );
+void fgUpdateMenuHighlight ( SFG_Menu *menu );
+GLboolean fgCheckActiveMenu ( SFG_Window *window, int button, GLboolean pressed,
+                              int mouse_x, int mouse_y );
 void fgDeactivateMenu( SFG_Window *window );
-void fgDeactivateSubMenu( SFG_MenuEntry *menuEntry );
 
 /*
  * This function gets called just before the buffers swap, so that
@@ -823,31 +990,42 @@ void fgDeactivateSubMenu( SFG_MenuEntry *menuEntry );
  */
 void fgDisplayMenu( void );
 
-/*
- * Display the mouse cursor using OpenGL calls. The function
- * is defined in freeglut_cursor.c file.
- */
-void fgDisplayCursor( void );
-
-/*
- * Elapsed time as per glutGet(GLUT_ELAPSED_TIME).
- */
+/* Elapsed time as per glutGet(GLUT_ELAPSED_TIME). */
 long fgElapsedTime( void );
 
-/*
- * List functions
- */
+/* System time in milliseconds */
+long unsigned fgSystemTime(void);
+
+/* List functions */
 void fgListInit(SFG_List *list);
 void fgListAppend(SFG_List *list, SFG_Node *node);
 void fgListRemove(SFG_List *list, SFG_Node *node);
 int fgListLength(SFG_List *list);
 void fgListInsert(SFG_List *list, SFG_Node *next, SFG_Node *node);
 
-/*
- * Error Messages functions
- */
+/* Error Message functions */
 void fgError( const char *fmt, ... );
 void fgWarning( const char *fmt, ... );
+
+/*
+ * Check if "hint" is present in "property" for "window".  See freeglut_init.c
+ */
+#if TARGET_HOST_POSIX_X11
+int fgHintPresent(Window window, Atom property, Atom hint);
+
+/* Handler for X extension Events */
+#ifdef HAVE_X11_EXTENSIONS_XINPUT2_H
+  void fgHandleExtensionEvents( XEvent * ev );
+  void fgRegisterDevices( Display* dpy, Window* win );
+#endif
+
+#endif
+
+SFG_Proc fghGetProcAddress( const char *procName );
+
+#if TARGET_HOST_MS_WINDOWS
+extern void (__cdecl *__glutExitFunc)( int return_value );
+#endif
 
 #endif /* FREEGLUT_INTERNAL_H */
 

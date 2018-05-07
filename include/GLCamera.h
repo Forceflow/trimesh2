@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GLCAMERA_H
+#define GLCAMERA_H
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -16,7 +17,7 @@ namespace trimesh {
 
 namespace Mouse {
 	enum button { NONE, ROTATE, MOVEXY, MOVEZ, WHEELUP, WHEELDOWN, LIGHT };
-};
+}
 
 class GLCamera {
 public:
@@ -37,7 +38,7 @@ private:
 
 	Constraint constraint_;
 	float field_of_view, pixscale;
-	mutable float surface_depth;
+	mutable float neardist, fardist;
 	float click_depth;
 	float tb_screen_x, tb_screen_y, tb_screen_size;
 	bool read_depth(int x, int y, point &p) const;
@@ -50,23 +51,23 @@ private:
 	void wheel(Mouse::button updown, xform &xf);
 	void relight(int mousex, int mousey);
 	void mouse_click(int mousex, int mousey,
-			 const point &scene_center, float scene_size);
+	                 const point &scene_center, float scene_size);
 
 public:
 	GLCamera() : lastb(Mouse::NONE), lightdir(vec(0,0,1)),
-		     dospin(false), spinspeed(0),
-		     constraint_(UNCONSTRAINED), field_of_view(0.7f),
-		     surface_depth(0.0f), click_depth(0.0f)
+	             dospin(false), spinspeed(0),
+	             constraint_(UNCONSTRAINED), field_of_view(0.7f),
+	             neardist(0.0f), fardist(0.0f), click_depth(0.0f)
 	{
 		lightdir[0] = lightdir[1] = 0; lightdir[2] = 1;
 		last_time = now();
 	}
 
-	void setupGL(const point &scene_center, float scene_size) const;
+	void setupGL(const trimesh::point &scene_center, float scene_size) const;
 
 	void mouse(int mousex, int mousey, Mouse::button b,
-		   const point &scene_center, float scene_size,
-		   xform &xf);
+	           const point &scene_center, float scene_size,
+	           xform &xf);
 
 	bool autospin(xform &xf);
 	void stopspin() { dospin = false; }
@@ -81,4 +82,6 @@ public:
 	void set_constraint(Constraint c) { constraint_ = c; }
 };
 
-}; // namespace trimesh
+} // namespace trimesh
+
+#endif

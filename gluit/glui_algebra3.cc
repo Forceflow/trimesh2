@@ -72,7 +72,7 @@ vec2::vec2(const vec2& v)
 { n[VX] = v.n[VX]; n[VY] = v.n[VY]; }
 
 vec2::vec2(const vec3& v) // it is up to caller to avoid divide-by-zero
-{ n[VX] = v.n[VX]/v.n[VZ]; n[VY] = v.n[VY]/v.n[VZ]; };
+{ n[VX] = v.n[VX]/v.n[VZ]; n[VY] = v.n[VY]/v.n[VZ]; }
 
 vec2::vec2(const vec3& v, int dropAxis) {
     switch (dropAxis) {
@@ -582,7 +582,7 @@ vec4 prod(const vec4& a, const vec4& b)
 mat3::mat3(void) { *this = identity2D(); }
 
 mat3::mat3(const vec3& v0, const vec3& v1, const vec3& v2)
-{ this->set( v0, v1, v2 ); };
+{ this->set( v0, v1, v2 ); }
 
 mat3::mat3(const float d)
 { v[0] = v[1] = v[2] = vec3(d); }

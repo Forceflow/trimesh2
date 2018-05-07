@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TRIMESH_H
+#define TRIMESH_H
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -10,41 +11,26 @@ Class for triangle meshes.
 #include "Vec.h"
 #include "Box.h"
 #include "Color.h"
+#include "strutil.h"
 #include <vector>
-#include <string>
-#ifndef M_PIf
-# define M_PIf 3.1415927f
-#endif
+
 
 namespace trimesh {
+
+template <class T>
+static inline void clear_and_release(::std::vector<T> &v)
+{
+	// Standard trick to release a vector's storage, since clear() doesn't
+	::std::vector<T>().swap(v);
+}
 
 class TriMesh {
 public:
 	//
 	// Types
 	//
-	struct Face {
-		int v[3];
-
-		Face() {}
-		Face(const int &v0, const int &v1, const int &v2)
-			{ v[0] = v0; v[1] = v1; v[2] = v2; }
-		Face(const int *v_)
-			{ v[0] = v_[0]; v[1] = v_[1]; v[2] = v_[2]; }
-		template <class S> explicit Face(const S &x)
-			{ v[0] = x[0];  v[1] = x[1];  v[2] = x[2]; }
-		int &operator[] (int i) { return v[i]; }
-		const int &operator[] (int i) const { return v[i]; }
-		operator const int * () const { return &(v[0]); }
-		operator const int * () { return &(v[0]); }
-		operator int * () { return &(v[0]); }
-		int indexof(int v_) const
-		{
-			return (v[0] == v_) ? 0 :
-			       (v[1] == v_) ? 1 :
-			       (v[2] == v_) ? 2 : -1;
-		}
-	};
+	typedef Vec<3,int> Face;
+	typedef Box<3,float> BBox;
 
 	struct BSphere {
 		point center;
@@ -59,8 +45,11 @@ public:
 	//
 	enum TstripRep { TSTRIP_LENGTH, TSTRIP_TERM };
 	enum { GRID_INVALID = -1 };
-	enum StatOp { STAT_MIN, STAT_MAX, STAT_MEAN, STAT_MEANABS,
-		STAT_RMS, STAT_MEDIAN, STAT_STDEV, STAT_TOTAL };
+	enum StatOp {
+		STAT_MIN, STAT_MINABS, STAT_MAX, STAT_MAXABS,
+		STAT_SUM, STAT_SUMABS, STAT_SUMSQR,
+		STAT_MEAN, STAT_MEANABS, STAT_RMS,
+		STAT_MEDIAN, STAT_STDEV };
 	enum StatVal { STAT_VALENCE, STAT_FACEAREA, STAT_ANGLE,
 		STAT_DIHEDRAL, STAT_EDGELEN, STAT_X, STAT_Y, STAT_Z };
 
@@ -100,7 +89,7 @@ public:
 	::std::vector<float> pointareas;
 
 	// Bounding structures
-	box bbox;
+	BBox bbox;
 	BSphere bsphere;
 
 	// Connectivity structures:
@@ -116,10 +105,6 @@ public:
 	//
 	// Compute all this stuff...
 	//
-	void need_tstrips();
-	void convert_strips(TstripRep rep);
-	void unpack_tstrips();
-	void triangulate_grid(bool remove_slivers = true);
 	void need_faces()
 	{
 		if (!faces.empty())
@@ -129,10 +114,21 @@ public:
 		else if (!grid.empty())
 			triangulate_grid();
 	}
-	void need_normals();
-	void need_pointareas();
+	void need_tstrips(TstripRep rep = TSTRIP_LENGTH);
+	void convert_strips(TstripRep rep);
+	void unpack_tstrips();
+	void resize_grid(int width, int height)
+	{
+		grid_width = width;
+		grid_height = height;
+		grid.clear();
+		grid.resize(grid_width * grid_height, GRID_INVALID);
+	}
+	void triangulate_grid(bool remove_slivers = true);
+	void need_normals(bool simple_area_weighted = false);
 	void need_curvatures();
 	void need_dcurv();
+	void need_pointareas();
 	void need_bbox();
 	void need_bsphere();
 	void need_neighbors();
@@ -140,19 +136,36 @@ public:
 	void need_across_edge();
 
 	//
-	// Delete everything
+	// Delete everything and release storage
 	//
+	void clear_vertices()      { clear_and_release(vertices); }
+	void clear_faces()         { clear_and_release(faces); }
+	void clear_tstrips()       { clear_and_release(tstrips); }
+	void clear_grid()          { clear_and_release(grid);
+	                             grid_width = grid_height = -1;}
+	void clear_colors()        { clear_and_release(colors); }
+	void clear_confidences()   { clear_and_release(confidences); }
+	void clear_flags()         { clear_and_release(flags); flag_curr = 0; }
+	void clear_normals()       { clear_and_release(normals); }
+	void clear_curvatures()    { clear_and_release(pdir1);
+	                             clear_and_release(pdir2);
+	                             clear_and_release(curv1);
+	                             clear_and_release(curv2); }
+	void clear_dcurv()         { clear_and_release(dcurv); }
+	void clear_pointareas()    { clear_and_release(pointareas);
+	                             clear_and_release(cornerareas); }
+	void clear_bbox()          { bbox.clear(); }
+	void clear_bsphere()       { bsphere.valid = false; }
+	void clear_neighbors()     { clear_and_release(neighbors); }
+	void clear_adjacentfaces() { clear_and_release(adjacentfaces); }
+	void clear_across_edge()   { clear_and_release(across_edge); }
 	void clear()
 	{
-		vertices.clear(); faces.clear(); tstrips.clear();
-		grid.clear(); grid_width = grid_height = -1;
-		colors.clear(); confidences.clear();
-		flags.clear(); flag_curr = 0;
-		normals.clear(); pdir1.clear(); pdir2.clear();
-		curv1.clear(); curv2.clear(); dcurv.clear();
-		cornerareas.clear(); pointareas.clear();
-		bbox.valid = bsphere.valid = false;
-		neighbors.clear(); adjacentfaces.clear(); across_edge.clear();
+		clear_vertices(); clear_faces(); clear_tstrips(); clear_grid();
+		clear_colors(); clear_confidences(); clear_flags();
+		clear_normals(); clear_curvatures(); clear_dcurv();
+		clear_pointareas(); clear_bbox(); clear_bsphere();
+		clear_neighbors(); clear_adjacentfaces(); clear_across_edge();
 	}
 
 	//
@@ -172,17 +185,17 @@ public:
 	//
 
 	// Is vertex v on the mesh boundary?
-	bool is_bdy(int v)
+	inline bool is_bdy(int v)
 	{
-		if (neighbors.empty()) need_neighbors();
-		if (adjacentfaces.empty()) need_adjacentfaces();
+		if (unlikely(neighbors.empty())) need_neighbors();
+		if (unlikely(adjacentfaces.empty())) need_adjacentfaces();
 		return neighbors[v].size() != adjacentfaces[v].size();
 	}
 
 	// Centroid of face f
-	vec centroid(int f)
+	inline vec centroid(int f)
 	{
-		if (faces.empty()) need_faces();
+		if (unlikely(faces.empty())) need_faces();
 		return (1.0f / 3.0f) *
 			(vertices[faces[f][0]] +
 			 vertices[faces[f][1]] +
@@ -190,35 +203,35 @@ public:
 	}
 
 	// Normal of face f
-	vec trinorm(int f)
+	inline vec trinorm(int f)
 	{
-		if (faces.empty()) need_faces();
-		return trimesh::trinorm(vertices[faces[f][0]], vertices[faces[f][1]],
-			vertices[faces[f][2]]);
+		if (unlikely(faces.empty())) need_faces();
+		return trimesh::trinorm(vertices[faces[f][0]],
+			vertices[faces[f][1]], vertices[faces[f][2]]);
 	}
 
 	// Angle of corner j in triangle i
-	float cornerangle(int i, int j)
+	inline float cornerangle(int i, int j)
 	{
 		using namespace ::std;
 
-		if (faces.empty()) need_faces();
+		if (unlikely(faces.empty())) need_faces();
 		const point &p0 = vertices[faces[i][j]];
-		const point &p1 = vertices[faces[i][(j+1)%3]];
-		const point &p2 = vertices[faces[i][(j+2)%3]];
+		const point &p1 = vertices[faces[i][NEXT_MOD3(j)]];
+		const point &p2 = vertices[faces[i][PREV_MOD3(j)]];
 		return acos((p1 - p0) DOT (p2 - p0));
 	}
 
 	// Dihedral angle between face i and face across_edge[i][j]
-	float dihedral(int i, int j)
+	inline float dihedral(int i, int j)
 	{
-		if (across_edge.empty()) need_across_edge();
-		if (across_edge[i][j] < 0) return 0.0f;
+		if (unlikely(across_edge.empty())) need_across_edge();
+		if (unlikely(across_edge[i][j] < 0)) return 0.0f;
 		vec mynorm = trinorm(i);
 		vec othernorm = trinorm(across_edge[i][j]);
 		float ang = angle(mynorm, othernorm);
-		vec towards = 0.5f * (vertices[faces[i][(j+1)%3]] +
-		                      vertices[faces[i][(j+2)%3]]) -
+		vec towards = 0.5f * (vertices[faces[i][NEXT_MOD3(j)]] +
+		                      vertices[faces[i][PREV_MOD3(j)]]) -
 		              vertices[faces[i][j]];
 		if ((towards DOT othernorm) < 0.0f)
 			return M_PIf + ang;
@@ -248,4 +261,6 @@ public:
 
 };
 
-}; // namespace trimesh
+} // namespace trimesh
+
+#endif

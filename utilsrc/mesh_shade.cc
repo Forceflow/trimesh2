@@ -23,16 +23,6 @@ using namespace trimesh;
 #define ATOF(x) ((float) atof(x))
 
 
-// Quick 'n dirty portable random number generator 
-static inline float tinyrnd()
-{
-	// Assumes unsigned is exactly 32 bits
-	static unsigned trand = 0;
-	trand = 1664525u * trand + 1013904223u;
-	return (float) trand / 4294967296.0f;
-}
-
-
 // Apply a solid color to the mesh
 void solidcolor(TriMesh *mesh, const char *col)
 {
@@ -60,8 +50,22 @@ void colorbynormals(TriMesh *mesh)
 }
 
 
-// Compute a "typical scale" for the mesh: computed as 1% of 
-// the reciprocal of the 10-th percentile curvature 
+// Color based on confidences
+void colorbyconfidences(TriMesh *mesh, float conf_scale)
+{
+	int nv = mesh->vertices.size();
+	int nc = mesh->confidences.size();
+	if (nc != nv)
+		return;
+	for (int i = 0; i < nv; i++) {
+		float c = conf_scale * mesh->confidences[i];
+		mesh->colors[i] = Color(0.5f + 0.5f * c, c, c);
+	}
+}
+
+
+// Compute a "typical scale" for the mesh: computed as 1% of
+// the reciprocal of the 10-th percentile curvature
 float typical_scale(TriMesh *mesh)
 {
 	const float frac = 0.1f;
@@ -78,16 +82,12 @@ float typical_scale(TriMesh *mesh)
 	mesh->need_curvatures();
 	int nv = mesh->curv1.size();
 	int nsamp = min(nv, 500);
-                
+
 	vector<float> samples;
 	samples.reserve(nsamp * 2);
-        
-	for (int i = 0; i < nsamp; i++) {
-		// Quick 'n dirty portable random number generator  
-		static unsigned randq = 0;
-		randq = unsigned(1664525) * randq + unsigned(1013904223);
 
-		int ind = int(tinyrnd() * nv);
+	for (int i = 0; i < nsamp; i++) {
+		int ind = uniform_rnd(nv);
 		samples.push_back(fabs(mesh->curv1[ind]));
 		samples.push_back(fabs(mesh->curv2[ind]));
 	}
@@ -126,7 +126,7 @@ void colorbycurv(TriMesh *mesh, const char *scale, const char *smooth)
 		float H = 0.5f * (mesh->curv1[i] + mesh->curv2[i]);
 		float K = mesh->curv1[i] * mesh->curv2[i];
 		float h = 4.0f / 3.0f * fabs(atan2(H*H-K,H*H*sgn(H)));
-		float s = (float) M_2_PI * atan((2.0f*H*H-K)*cscale);
+		float s = M_2_PIf * atan((2.0f*H*H-K)*cscale);
 		mesh->colors[i] = Color::hsv(h,s,1.0);
 	}
 }
@@ -178,7 +178,7 @@ void acc(TriMesh *mesh, const char *maxsize_, const char *offset_)
 			else
 				tmin = tmid;
 		}
-		mesh->colors[i] = Color(0.5f * (tmin + tmax));
+		mesh->colors[i] = Color(0.5f * (tmin + tmax) / maxsize);
 	}
 	delete kd;
 }
@@ -236,8 +236,8 @@ point closest_on_face(const TriMesh *mesh, int i, const point &p)
 	vec a = v1 - v0, b = v2 - v0, p1 = p - v0, n = a CROSS b;
 
 	float A[3][3] = { { a[0], b[0], n[0] },
-			  { a[1], b[1], n[1] },
-			  { a[2], b[2], n[2] } };
+	                  { a[1], b[1], n[1] },
+	                  { a[2], b[2], n[2] } };
 	float x[3] = { p1[0], p1[1], p1[2] };
 	int indx[3];
 	ludcmp<float,3>(A, indx);
@@ -264,9 +264,12 @@ point closest_on_face(const TriMesh *mesh, int i, const point &p)
 // Find (good approximation to) closest point on mesh to p.
 // Finds closest vertex, then checks all faces that touch it.
 bool find_closest_pt(const TriMesh *mesh, const KDtree *kd, const point &p,
-		     float maxdist2, point &pmatch)
+                     float maxdist2, point &pmatch)
 {
-	const float *match = kd->closest_to_pt(p, maxdist2);
+	// const float *match = kd->closest_to_pt(p, maxdist2);
+	// The closest vertex might be much further away than the closest
+	// point on the surface.  So, we need to be conservative here.
+	const float *match = kd->closest_to_pt(p, 100.0f * maxdist2);
 	if (!match)
 		return false;
 	int ind = (match - (const float *) &(mesh->vertices[0][0])) / 3;
@@ -280,7 +283,7 @@ bool find_closest_pt(const TriMesh *mesh, const KDtree *kd, const point &p,
 		return true;
 	}
 
-	float closest_dist2 = BIGNUM;
+	float closest_dist2 = maxdist2;
 	for (size_t i = 0; i < a.size(); i++) {
 		point c = closest_on_face(mesh, a[i], p);
 		float this_dist2 = dist2(c, p);
@@ -289,7 +292,7 @@ bool find_closest_pt(const TriMesh *mesh, const KDtree *kd, const point &p,
 			pmatch = c;
 		}
 	}
-	return (closest_dist2 != BIGNUM);
+	return (closest_dist2 != maxdist2);
 }
 
 
@@ -374,7 +377,7 @@ void remapcolor(TriMesh *mesh, const char *scale_, const char *off_,
 // Color based on depth in direction (x,y,z)
 // To find range, eliminates percentage p of points
 void colorbydepth(TriMesh *mesh, const char *x_, const char *y_,
-		  const char *z_, const char *p_)
+                  const char *z_, const char *p_)
 {
 	vec dir(ATOF(x_), ATOF(y_), ATOF(z_));
 	float p = ATOF(p_);
@@ -406,12 +409,37 @@ void colorbydepth(TriMesh *mesh, const char *x_, const char *y_,
 }
 
 
+// Color based on logical position in grid
+void colorbygridpos(TriMesh *mesh)
+{
+	int w = mesh->grid_width, h = mesh->grid_height;
+	if (w <= 0 || h <= 0 || (int) mesh->grid.size() != w * h) {
+		TriMesh::dprintf("No grid!\n");
+		return;
+	}
+
+	mesh->colors.clear();
+	mesh->colors.resize(mesh->vertices.size());
+	for (int i = 0; i < w * h; i++) {
+		int ind = mesh->grid[i];
+		if (ind < 0)
+			continue;
+		if (mesh->colors[ind] != Color(0,0,0))
+			TriMesh::dprintf("Multiple references to vertex %d\n", ind);
+		float red = float((i % w) + 1) / w;
+		float green = float((i / w) + 1) / h;
+		mesh->colors[ind] = Color(red, green, 0.0f);
+	}
+}
+
+
 void usage(const char *myname)
 {
 	fprintf(stderr, "Usage: %s model shader [options] outfile\n", myname);
 	fprintf(stderr, "Shaders:\n");
 	fprintf(stderr, "	color rrggbb	Solid color (specified in hex)\n");
 	fprintf(stderr, "	normals		Colored based on normals (r = nx, etc.)\n");
+	fprintf(stderr, "	confidences [s]	Color by confidences with optional scale\n");
 	fprintf(stderr, "	curv sc sm	Colored based on curvature (args = scale, smoothing)\n");
 	fprintf(stderr, "	gcurv sc sm	Grayscale based on curvature (args = scale, smoothing)\n");
 	fprintf(stderr, "	acc max off	Accessibility (args = maximum size, offset)\n");
@@ -420,6 +448,7 @@ void usage(const char *myname)
 	fprintf(stderr, "	findvert v max	Distance to vertex (args = vert #, max distance)\n");
 	fprintf(stderr, "	remap s o g	Remap existing colors (args = scale, offset, gamma)\n");
 	fprintf(stderr, "	depth x y z p	Color by depth in dir (x,y,z); clamp fraction p\n");
+	fprintf(stderr, "	gridpos		Color by row/col position in a grid (grids only!)\n");
 	exit(1);
 }
 
@@ -445,6 +474,13 @@ int main(int argc, char *argv[])
 		outfilename = argv[4];
 	} else if (begins_with(shader, "norm")) {
 		colorbynormals(themesh);
+	} else if (begins_with(shader, "conf")) {
+		float conf_scale = 1.0f;
+		if (argc > 4) {
+			conf_scale = atof(argv[3]);
+			outfilename = argv[4];
+		}
+		colorbyconfidences(themesh, conf_scale);
 	} else if (begins_with(shader, "curv")) {
 		if (argc < 6) {
 			TriMesh::eprintf("\n\"curv\" needs two arguments\n\n");
@@ -501,6 +537,8 @@ int main(int argc, char *argv[])
 		}
 		colorbydepth(themesh, argv[3], argv[4], argv[5], argv[6]);
 		outfilename = argv[7];
+	} else if (begins_with(shader, "grid")) {
+		colorbygridpos(themesh);
 	} else {
 		TriMesh::eprintf("\nUnknown shader [%s]\n\n", shader);
 		usage(argv[0]);
@@ -508,5 +546,3 @@ int main(int argc, char *argv[])
 
 	themesh->write(outfilename);
 }
-
-

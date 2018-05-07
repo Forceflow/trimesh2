@@ -1,6 +1,3 @@
-libonly:
-	$(MAKE) -C libsrc
-
 all win32 linux32 linux64 darwin32 darwin64 clean:
 	$(MAKE) -C libsrc $@
 	$(MAKE) -C gluit $@
@@ -11,7 +8,7 @@ debug:
 	$(MAKE) -C gluit DEBUG=y
 	$(MAKE) -C utilsrc DEBUG=y
 
-FINDCMD = find trimesh2 -name 'OBJ*' -prune -o -name CVS -prune -o -type f -print
+FINDCMD = find trimesh2 -name 'OBJ*' -prune -o -name .svn -prune -o -type f -print
 
 tar:
 	cd .. && tar zcvf trimesh2.tar.gz `$(FINDCMD) | sort`
@@ -19,5 +16,5 @@ tar:
 zip:
 	cd .. && $(FINDCMD) | sort | zip -9 trimesh2 -@
 
-.PHONY : all clean debug default tar win32 zip
+.PHONY : all win32 linux32 linux64 darwin32 darwin64 clean debug tar zip
 

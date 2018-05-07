@@ -28,13 +28,13 @@ public:
 	static const data_t NO_DATA = 0xffffffffu;
 
 private:
-	float voxelsize, scale;
+	float scale;
 	vector<voxel_coord_t> voxel_coords;
 	vector<data_t> data;
 
 public:
 	VHashTable(size_t maxpoints, float voxelsize_) :
-		voxelsize(voxelsize_), scale(1.0f / voxelsize_)
+		scale(1.0f / voxelsize_)
 	{
 		size_t n = SIZE_FUDGE * maxpoints;
 		voxel_coords.resize(n);
@@ -45,7 +45,7 @@ public:
 	data_t &operator[] (const point &p)
 	{
 		voxel_coord_t c(int(floor(p[0] * scale)),
-		                int(floor(p[1] * scale)),
+				int(floor(p[1] * scale)),
 				int(floor(p[2] * scale)));
 		key_t key = MAGIC1 * c[0] + MAGIC2 * c[1] + MAGIC3 * c[2];
 		key %= data.size();
@@ -117,7 +117,6 @@ void crunch(TriMesh *in, TriMesh *out, float voxelsize)
 }
 
 
-
 void usage(const char *myname)
 {
 	fprintf(stderr, "Usage: %s in.ply out.ply\n", myname);
@@ -142,4 +141,3 @@ int main(int argc, char *argv[])
 		out->need_tstrips();
 	out->write(argv[2]);
 }
-

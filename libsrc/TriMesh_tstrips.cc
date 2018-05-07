@@ -14,15 +14,17 @@ namespace trimesh {
 
 // Forward declarations
 static void tstrip_build(TriMesh &mesh, int f, vector<signed char> &face_avail,
-			 vector<int> &todo);
-static void collect_tris_in_strips(vector<int> &tstrips);
+                         vector<int> &todo);
+//static void collect_tris_in_strips(vector<int> &tstrips);
 
 
 // Convert faces to tstrips
-void TriMesh::need_tstrips()
+void TriMesh::need_tstrips(TstripRep rep)
 {
-	if (!tstrips.empty())
+	if (!tstrips.empty()) {
+		convert_strips(rep);
 		return;
+	}
 
 	if (faces.empty() && !grid.empty())
 		need_faces();
@@ -63,7 +65,7 @@ void TriMesh::need_tstrips()
 		nstrips++;
 	}
 
-	convert_strips(TSTRIP_LENGTH);
+	convert_strips(rep);
 
 	dprintf("Done.\n  %d strips (Avg. length %.1f)\n",
 		nstrips, (float) faces.size() / nstrips);
@@ -91,7 +93,7 @@ static void tstrip_build(TriMesh &mesh, int f, vector<signed char> &face_avail,
 		if (ae == -1 || face_avail[ae] < 0)
 			continue;
 		score[i]++;
-		int next_edge = mesh.faces[ae].indexof(v[(i+1)%3]);
+		int next_edge = mesh.faces[ae].indexof(v[NEXT_MOD3(i)]);
 		int nae = mesh.across_edge[ae][next_edge];
 		if (nae == -1 || face_avail[nae] < 0)
 			continue;
@@ -102,11 +104,11 @@ static void tstrip_build(TriMesh &mesh, int f, vector<signed char> &face_avail,
 
 	int best_score = max(max(score[0], score[1]), score[2]);
 	int best = (score[0] == best_score) ? 0 :
-		   (score[1] == best_score) ? 1 : 2;
+	           (score[1] == best_score) ? 1 : 2;
 
-	int vlast2 = v[ best     ];
-	int vlast1 = v[(best+1)%3];
-	int vnext  = v[(best+2)%3];
+	int vlast2 = v[          best ];
+	int vlast1 = v[NEXT_MOD3(best)];
+	int vnext  = v[PREV_MOD3(best)];
 	int dir = 1;
 	mesh.tstrips.push_back(vlast2);
 	mesh.tstrips.push_back(vlast1);
@@ -124,7 +126,10 @@ static void tstrip_build(TriMesh &mesh, int f, vector<signed char> &face_avail,
 				todo.push_back(ae);
 		}
 
-		f = mesh.across_edge[f][mesh.faces[f].indexof(vlast2)];
+		int faceindex = mesh.faces[f].indexof(vlast2);
+		if (faceindex < 0)
+			break;
+		f = mesh.across_edge[f][faceindex];
 		if (f == -1 || face_avail[f] < 0)
 			break;
 		vlast2 = vlast1;
@@ -132,7 +137,7 @@ static void tstrip_build(TriMesh &mesh, int f, vector<signed char> &face_avail,
 		vnext = mesh.faces[f][(mesh.faces[f].indexof(vlast2)+3+dir)%3];
 		dir = -dir;
 	}
-	
+
 	mesh.tstrips.push_back(-1);
 }
 
@@ -142,6 +147,8 @@ void TriMesh::unpack_tstrips()
 {
 	if (tstrips.empty() || !faces.empty())
 		return;
+
+	convert_strips(TSTRIP_LENGTH);
 
 	dprintf("Unpacking triangle strips... ");
 	int nstrips = tstrips.size();
@@ -165,12 +172,12 @@ void TriMesh::unpack_tstrips()
 		}
 		if (flip)
 			faces.push_back(Face(tstrips[i-1],
-					     tstrips[i-2],
-					     tstrips[i]));
+			                     tstrips[i-2],
+			                     tstrips[i]));
 		else
 			faces.push_back(Face(tstrips[i-2],
-					     tstrips[i-1],
-					     tstrips[i]));
+			                     tstrips[i-1],
+			                     tstrips[i]));
 		flip = !flip;
 		len--;
 	}
@@ -221,6 +228,7 @@ void TriMesh::convert_strips(TstripRep rep)
 }
 
 
+#if 0
 // Collect all single triangles to be at the end of the list of tstrips
 static void collect_tris_in_strips(vector<int> &tstrips)
 {
@@ -254,5 +262,6 @@ static void collect_tris_in_strips(vector<int> &tstrips)
 	tstrips.insert(tstrips.end(), tris.begin(), tris.end());
 
 }
+#endif
 
-}; // namespace trimesh
+} // namespace trimesh

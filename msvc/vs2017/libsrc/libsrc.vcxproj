@@ -18,6 +18,56 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\Box.h" />
+    <ClInclude Include="..\..\..\include\bsphere.h" />
+    <ClInclude Include="..\..\..\include\Color.h" />
+    <ClInclude Include="..\..\..\include\endianutil.h" />
+    <ClInclude Include="..\..\..\include\GLCamera.h" />
+    <ClInclude Include="..\..\..\include\GLManager.h" />
+    <ClInclude Include="..\..\..\include\ICP.h" />
+    <ClInclude Include="..\..\..\include\KDtree.h" />
+    <ClInclude Include="..\..\..\include\lineqn.h" />
+    <ClInclude Include="..\..\..\include\mathcompat.h" />
+    <ClInclude Include="..\..\..\include\mathutil.h" />
+    <ClInclude Include="..\..\..\include\noise3d.h" />
+    <ClInclude Include="..\..\..\include\strutil.h" />
+    <ClInclude Include="..\..\..\include\timestamp.h" />
+    <ClInclude Include="..\..\..\include\TriMesh.h" />
+    <ClInclude Include="..\..\..\include\TriMesh_algo.h" />
+    <ClInclude Include="..\..\..\include\Vec.h" />
+    <ClInclude Include="..\..\..\include\XForm.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\libsrc\conn_comps.cc" />
+    <ClCompile Include="..\..\..\libsrc\diffuse.cc" />
+    <ClCompile Include="..\..\..\libsrc\edgeflip.cc" />
+    <ClCompile Include="..\..\..\libsrc\faceflip.cc" />
+    <ClCompile Include="..\..\..\libsrc\filter.cc" />
+    <ClCompile Include="..\..\..\libsrc\GLCamera.cc" />
+    <ClCompile Include="..\..\..\libsrc\GLManager.cc" />
+    <ClCompile Include="..\..\..\libsrc\ICP.cc" />
+    <ClCompile Include="..\..\..\libsrc\KDtree.cc" />
+    <ClCompile Include="..\..\..\libsrc\make.cc" />
+    <ClCompile Include="..\..\..\libsrc\merge.cc" />
+    <ClCompile Include="..\..\..\libsrc\overlap.cc" />
+    <ClCompile Include="..\..\..\libsrc\remove.cc" />
+    <ClCompile Include="..\..\..\libsrc\reorder_verts.cc" />
+    <ClCompile Include="..\..\..\libsrc\subdiv.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_bounding.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_connectivity.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_curvature.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_grid.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_io.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_normals.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_pointareas.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_stats.cc" />
+    <ClCompile Include="..\..\..\libsrc\TriMesh_tstrips.cc" />
+    <ClCompile Include="..\..\..\libsrc\umbrella.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\libsrc\shape_data.inc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FC69AE77-3F20-4FBE-BCA1-695E7644ACA5}</ProjectGuid>
     <RootNamespace>libsrc</RootNamespace>
@@ -157,53 +207,6 @@
       <OutputFile>$(OutDir)trimesh$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\include\Box.h" />
-    <ClInclude Include="..\..\..\include\bsphere.h" />
-    <ClInclude Include="..\..\..\include\Color.h" />
-    <ClInclude Include="..\..\..\include\GLCamera.h" />
-    <ClInclude Include="..\..\..\include\GL\freeglut.h" />
-    <ClInclude Include="..\..\..\include\GL\freeglut_ext.h" />
-    <ClInclude Include="..\..\..\include\GL\freeglut_std.h" />
-    <ClInclude Include="..\..\..\include\GL\glui.h" />
-    <ClInclude Include="..\..\..\include\GL\glut.h" />
-    <ClInclude Include="..\..\..\include\ICP.h" />
-    <ClInclude Include="..\..\..\include\KDtree.h" />
-    <ClInclude Include="..\..\..\include\lineqn.h" />
-    <ClInclude Include="..\..\..\include\mempool.h" />
-    <ClInclude Include="..\..\..\include\noise3d.h" />
-    <ClInclude Include="..\..\..\include\strutil.h" />
-    <ClInclude Include="..\..\..\include\timestamp.h" />
-    <ClInclude Include="..\..\..\include\TriMesh.h" />
-    <ClInclude Include="..\..\..\include\TriMesh_algo.h" />
-    <ClInclude Include="..\..\..\include\Vec.h" />
-    <ClInclude Include="..\..\..\include\XForm.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\libsrc\conn_comps.cc" />
-    <ClCompile Include="..\..\..\libsrc\diffuse.cc" />
-    <ClCompile Include="..\..\..\libsrc\edgeflip.cc" />
-    <ClCompile Include="..\..\..\libsrc\faceflip.cc" />
-    <ClCompile Include="..\..\..\libsrc\filter.cc" />
-    <ClCompile Include="..\..\..\libsrc\GLCamera.cc" />
-    <ClCompile Include="..\..\..\libsrc\ICP.cc" />
-    <ClCompile Include="..\..\..\libsrc\KDtree.cc" />
-    <ClCompile Include="..\..\..\libsrc\lmsmooth.cc" />
-    <ClCompile Include="..\..\..\libsrc\overlap.cc" />
-    <ClCompile Include="..\..\..\libsrc\remove.cc" />
-    <ClCompile Include="..\..\..\libsrc\reorder_verts.cc" />
-    <ClCompile Include="..\..\..\libsrc\shared.cc" />
-    <ClCompile Include="..\..\..\libsrc\subdiv.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_bounding.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_connectivity.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_curvature.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_grid.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_io.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_normals.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_pointareas.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_stats.cc" />
-    <ClCompile Include="..\..\..\libsrc\TriMesh_tstrips.cc" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

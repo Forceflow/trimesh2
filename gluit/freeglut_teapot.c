@@ -72,21 +72,16 @@
  * OpenGL(TM) is a trademark of Silicon Graphics, Inc.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
-
 #include "freeglut_teapot_data.h"
 
 /* -- PRIVATE FUNCTIONS ---------------------------------------------------- */
 
 
-static void teapot( GLint grid, GLdouble scale, GLenum type )
+static void fghTeapot( GLint grid, GLdouble scale, GLenum type )
 {
-#if TARGET_HOST_WINCE
+#if defined(_WIN32_WCE)
 		int i, numV=sizeof(strip_vertices)/4, numI=sizeof(strip_normals)/4;
 #else
     double p[4][4][3], q[4][4][3], r[4][4][3], s[4][4][3];
@@ -104,7 +99,7 @@ static void teapot( GLint grid, GLdouble scale, GLenum type )
     glScaled( 0.5 * scale, 0.5 * scale, 0.5 * scale );
     glTranslated( 0.0, 0.0, -1.5 );
 
-#if TARGET_HOST_WINCE
+#if defined(_WIN32_WCE)
     glRotated( 90.0, 1.0, 0.0, 0.0 );
     glBegin( GL_TRIANGLE_STRIP );
 
@@ -168,7 +163,7 @@ static void teapot( GLint grid, GLdouble scale, GLenum type )
         glEvalMesh2(type, 0, grid, 0, grid);
       }
     }
-#endif  /* TARGET_HOST_WINCE */
+#endif  /* defined(_WIN32_WCE) */
 
     glPopMatrix();
     glPopAttrib();
@@ -182,10 +177,9 @@ static void teapot( GLint grid, GLdouble scale, GLenum type )
  */
 void FGAPIENTRY glutWireTeapot( GLdouble size )
 {
-    /*
-     * We will use the general teapot rendering code
-     */
-    teapot( 10, size, GL_LINE );
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutWireTeapot" );
+    /* We will use the general teapot rendering code */
+    fghTeapot( 10, size, GL_LINE );
 }
 
 /*
@@ -193,10 +187,9 @@ void FGAPIENTRY glutWireTeapot( GLdouble size )
  */
 void FGAPIENTRY glutSolidTeapot( GLdouble size )
 {
-    /*
-     * We will use the general teapot rendering code
-     */
-    teapot( 7, size, GL_FILL );
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSolidTeapot" );
+    /* We will use the general teapot rendering code */
+    fghTeapot( 7, size, GL_FILL );
 }
 
 /*** END OF FILE ***/

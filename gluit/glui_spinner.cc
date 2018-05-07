@@ -135,17 +135,17 @@ int    GLUI_Spinner::mouse_held_down_handler( int local_x, int local_y,
       do_click();
     }
     else {
-      if ( new_inside OR 1) {
+//      if ( new_inside OR 1) {
     /** The state changed, but we're still inside - that
       means we moved off the arrow: begin dragging **/
     state = GLUI_SPINNER_STATE_BOTH;
-      }
-      else {
+//      }
+//      else {
     /*** Here check y of mouse position to determine whether to 
       drag ***/
 
     /* ... */
-      }
+//      }
     }
 
     /*** We switched to up/down dragging ***/
