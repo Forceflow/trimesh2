@@ -7,20 +7,21 @@ Manages OpenGL camera and trackball/arcball interaction
 */
 
 #include "GLCamera.h"
-#ifdef __APPLE__
- #include <OpenGL/gl.h>
+
+#if defined(_WIN32)
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+# include <GL/gl.h>
+#elif defined(__APPLE__)
+# include <OpenGL/gl.h>
 #else
- #ifdef _WIN32
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
- #endif
- #include <GL/gl.h>
+# include <GL/gl.h>
 #endif
+
 using namespace std;
 
 
-#define DOF 10.0f
-#define MAXDOF 10000.0f
+#define MAX_FAR_NEAR_RATIO 10000.0f
 #define SPIN_TIME 0.1f
 #define SPIN_SPEED 0.05f
 #define TRACKBALL_R 0.8f
@@ -67,7 +68,7 @@ static inline GLint myGluUnProject(GLdouble winX, GLdouble winY, GLdouble winZ,
 	GLdouble* objX, GLdouble* objY, GLdouble* objZ)
 {
 	xform xf = inv(xform(proj) * xform(model));
-	Vec<3,double> v = xf * Vec<3,double>(
+	dvec3 v = xf * dvec3(
 		(winX - view[0]) / view[2] * 2.0 - 1.0,
 		(winY - view[1]) / view[3] * 2.0 - 1.0,
 		winZ * 2.0 - 1.0);
@@ -124,7 +125,7 @@ bool GLCamera::read_depth(int x, int y, point &p) const
 		if (d > 0.0001f && d < 0.9999f) {
 			GLdouble X, Y, Z;
 			myGluUnProject(xx, yy, d, M, P, V, &X, &Y, &Z);
-			p = point((float)X, (float)Y, (float)Z);
+			p.set(X, Y, Z);
 			return true;
 		}
 	}
@@ -179,7 +180,7 @@ void GLCamera::rotate(int mousex, int mousey, xform &xf)
 		spinspeed = spinamount / SPIN_TIME;
 	else
 		spinspeed = (spinamount / SPIN_TIME) +
-			    (1.0f-dt/SPIN_TIME)*spinspeed;
+		            (1.0f-dt/SPIN_TIME)*spinspeed;
 }
 
 
@@ -198,17 +199,12 @@ void GLCamera::movexy(int mousex, int mousey, xform &xf)
 void GLCamera::movez(int mousex, int mousey, xform &xf)
 {
 	float delta = MOVEZ_MULT / field_of_view * pixscale *
-		      ((mousex-lastmousex) - (mousey-lastmousey));
-	float dz = click_depth * (expm1(-delta));
+	              ((mousex-lastmousex) - (mousey-lastmousey));
+	float dz = click_depth * expm1(-delta);
 	//xf = xform::trans(0, 0, -dz) * xf;
 	xf = xform::trans(dz * spincenter / len(spincenter)) * xf;
 
-	surface_depth += dz;
-	if (surface_depth < 0)
-		surface_depth = 0;
-	click_depth += dz;
-	if (click_depth < 0)
-		click_depth = 0;
+	click_depth = clamp(click_depth + dz, neardist, fardist);
 }
 
 
@@ -221,12 +217,7 @@ void GLCamera::wheel(Mouse::button updown, xform &xf)
 	//xf = xform::trans(0, 0, -dz) * xf;
 	xf = xform::trans(dz * spincenter / len(spincenter)) * xf;
 
-	surface_depth += dz;
-	if (surface_depth < 0)
-		surface_depth = 0;
-	click_depth += dz;
-	if (click_depth < 0)
-		click_depth = 0;
+	click_depth = clamp(click_depth + dz, neardist, fardist);
 }
 
 
@@ -250,7 +241,7 @@ void GLCamera::relight(int mousex, int mousey)
 
 // Handle a mouse click - sets up rotation center, pixscale, and click_depth
 void GLCamera::mouse_click(int mousex, int mousey,
-			   const point &scene_center, float scene_size)
+                           const point &scene_center, float scene_size)
 {
 	GLdouble M[16], P[16]; GLint V[4];
 #if 0
@@ -271,14 +262,11 @@ void GLCamera::mouse_click(int mousex, int mousey,
 	point surface_point;
 	if (read_depth(mousex, mousey, surface_point))
 		click_depth = -surface_point[2];
-	else
-		click_depth = surface_depth;
-
 
 	GLdouble cx = 0.0, cy = 0.0, cz = 0.0;
 	myGluProject(scene_center[0], scene_center[1], scene_center[2],
-		     M, P, V,
-		     &cx, &cy, &cz);
+	             M, P, V,
+	             &cx, &cy, &cz);
 
 	double csize = max(V[2], V[3]);
 	int xmin = V[0], xmax = V[0]+V[2], ymin = V[1], ymax = V[1]+V[3];
@@ -292,9 +280,9 @@ void GLCamera::mouse_click(int mousex, int mousey,
 
 	GLdouble sx, sy, sz;
 	myGluUnProject((xmin+xmax)/2, (ymin+ymax)/2, 1,
-		       M, P, V,
-		       &sx, &sy, &sz);
-	spincenter = vec(float(sx), float(sy), float(sz));
+	               M, P, V,
+	               &sx, &sy, &sz);
+	spincenter.set(sx, sy, sz);
 	normalize(spincenter);
 	if (read_depth((xmin+xmax)/2, (ymin+ymax)/2, surface_point))
 		spincenter *=  DEPTH_FUDGE * surface_point[2] / spincenter[2];
@@ -306,8 +294,8 @@ void GLCamera::mouse_click(int mousex, int mousey,
 	spincenter = f * spincenter + (1.0f - f) * scene_center;
 
 	myGluProject(spincenter[0], spincenter[1], spincenter[2],
-		     M, P, V,
-		     &cx, &cy, &cz);
+	             M, P, V,
+	             &cx, &cy, &cz);
 	tb_screen_x = (float)cx;
 	tb_screen_y = (float)cy;
 	tb_screen_size = (float)csize;
@@ -316,10 +304,10 @@ void GLCamera::mouse_click(int mousex, int mousey,
 }
 
 
-// Handle a mouse event 
+// Handle a mouse event
 void GLCamera::mouse(int mousex, int mousey, Mouse::button b,
-		     const point &scene_center, float scene_size,
-		     xform &xf)
+                     const point &scene_center, float scene_size,
+                     xform &xf)
 {
 	if (b == Mouse::NONE && lastb == Mouse::NONE)
 		return;
@@ -382,18 +370,10 @@ void GLCamera::setupGL(const point &scene_center, float scene_size) const
 	glGetIntegerv(GL_VIEWPORT, V);
 	int width = V[2], height = V[3];
 
-	point surface_point;
-	if (read_depth(width/2, height/2, surface_point))
-		surface_depth = -surface_point[2];
-
-	float fardist  = max(-(scene_center[2] - scene_size),
-			     scene_size / DOF);
-	float neardist = max(-(scene_center[2] + scene_size),
-			     scene_size / MAXDOF);
-	surface_depth = min(surface_depth, fardist);
-	surface_depth = max(surface_depth, neardist);
-	surface_depth = max(surface_depth, fardist / MAXDOF);
-	neardist = max(neardist, surface_depth / DOF);
+	fardist  = max(-(scene_center[2] - scene_size),
+			scene_size / 10.0f);
+	neardist = max(-(scene_center[2] + scene_size),
+			fardist / MAX_FAR_NEAR_RATIO);
 
 	float diag = sqrt(float(sqr(width) + sqr(height)));
 	float top = (float) height/diag * 0.5f*field_of_view * neardist;
@@ -421,4 +401,4 @@ void GLCamera::setupGL(const point &scene_center, float scene_size) const
 	glLightfv(GL_LIGHT5, GL_POSITION, light5_position);
 }
 
-}; // namespace trimesh
+} // namespace trimesh

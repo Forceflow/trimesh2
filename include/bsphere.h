@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BSPHERE_H
+#define BSPHERE_H
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -47,7 +48,7 @@ public:
 };
 
 
-// Class for hoding and computing the bounding sphere
+// Class for holding and computing the bounding sphere
 template <size_t D, class T>
 class Miniball {
 public:
@@ -107,7 +108,7 @@ bool Basis<D,T>::push(const Vec<D,T> &p)
 		// set v_m to Q_m
 		for (size_t i = 0; i < D; i++)
 			v[m][i] = p[i] - q0[i];
-   
+
 		// compute the a_{m,i}, i < m
 		for (size_t i = 1; i < m; i++) {
 			a[m][i] = 0;
@@ -115,29 +116,29 @@ bool Basis<D,T>::push(const Vec<D,T> &p)
 				a[m][i] += v[i][j] * v[m][j];
 			a[m][i] *= (T(2) / z[i]);
 		}
-   
+
 		// update v_m to Q_m-\bar{Q}_m
 		for (size_t i = 1; i < m; i++) {
 			for (size_t j = 0; j < D; j++)
 				v[m][j] -= a[m][i] * v[i][j];
 		}
-   
+
 		// compute z_m
 		z[m] = 0;
 		for (size_t j = 0; j < D; j++)
 			z[m] += sqr(v[m][j]);
 		z[m] *= T(2);
-   
+
 		// reject push if z_m too small
 		if (z[m] < eps * current_sqr_r)
 			return false;
-   
+
 		// update c, sqr_r
 		T e = -sqr_r[m-1];
 		for (size_t i = 0; i < D; i++)
 			e += sqr(p[i] - c[m-1][i]);
 		f[m] = e / z[m];
-   
+
 		for (size_t i = 0; i < D; i++)
 			c[m][i] = c[m-1][i] + f[m]*v[m][i];
 		sqr_r[m] = sqr_r[m-1] + T(0.5) * e * f[m];
@@ -147,14 +148,14 @@ bool Basis<D,T>::push(const Vec<D,T> &p)
        s = ++m;
        return true;
 }
-   
+
 
 template <size_t D, class T>
 void Basis<D,T>::pop()
 {
 	m--;
 }
-   
+
 
 template <size_t D, class T>
 void Miniball<D,T>::move_to_front(It j)
@@ -237,7 +238,7 @@ void Miniball<D,T>::build(bool pivoting /* = true */)
 		mtf_mb(L.end());
 }
 
-}; // namespace trimesh
+} // namespace trimesh
 
 
 //
@@ -269,3 +270,5 @@ void Miniball<D,T>::build(bool pivoting /* = true */)
 //    CH-8092 Zuerich, Switzerland
 //    http://www.inf.ethz.ch/personal/gaertner
 //
+
+#endif

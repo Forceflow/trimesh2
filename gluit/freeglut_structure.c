@@ -25,13 +25,13 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 
 /* -- GLOBAL EXPORTS ------------------------------------------------------- */
 
@@ -53,7 +53,7 @@ SFG_Structure fgStructure = { { NULL, NULL },  /* The list of windows       */
 
 /* -- PRIVATE FUNCTIONS ---------------------------------------------------- */
 
-void fgClearCallBacks( SFG_Window *window )
+static void fghClearCallBacks( SFG_Window *window )
 {
     if( window )
     {
@@ -70,29 +70,23 @@ void fgClearCallBacks( SFG_Window *window )
  * If parent is set to NULL, the window created will be a topmost one.
  */
 SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title,
-                            int x, int y, int w, int h,
+                            GLboolean positionUse, int x, int y,
+                            GLboolean sizeUse, int w, int h,
                             GLboolean gameMode, GLboolean isMenu )
 {
-    /*
-     * Have the window object created
-     */
+    /* Have the window object created */
     SFG_Window *window = (SFG_Window *)calloc( sizeof(SFG_Window), 1 );
-    int fakeArgc = 0;
 
-    fgClearCallBacks( window );
+#if TARGET_HOST_UNIX_X11
+    window->Window.FBConfig = NULL;
+#endif
+    fghClearCallBacks( window );
 
-    /*
-     * If the freeglut internals haven't been initialized yet,
-     * do it now. Hack's idea courtesy of Chris Purnell...
-     */
-    if( !fgState.Initialised )
-        glutInit( &fakeArgc, NULL );
-
-    /*
-     * Initialize the object properties
-     */
+    /* Initialize the object properties */
     window->ID = ++fgStructure.WindowID;
+#if TARGET_HOST_POSIX_X11
     window->State.OldHeight = window->State.OldWidth = -1;
+#endif
 
     fgListInit( &window->Children );
     if( parent )
@@ -103,22 +97,21 @@ SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title,
     else
         fgListAppend( &fgStructure.Windows, &window->Node );
 
-    /*
-     * Set the default mouse cursor and reset the modifiers value
-     */
+    /* Set the default mouse cursor and reset the modifiers value */
     window->State.Cursor    = GLUT_CURSOR_INHERIT;
 
     window->IsMenu = isMenu;
 
     window->State.IgnoreKeyRepeat = GL_FALSE;
     window->State.KeyRepeating    = GL_FALSE;
+    window->State.IsFullscreen    = GL_FALSE;
 
     /*
      * Open the window now. The fgOpenWindow() function is system
      * dependant, and resides in freeglut_window.c. Uses fgState.
      */
-    fgOpenWindow( window, title, x, y, w, h, gameMode,
-                  parent ? GL_TRUE : GL_FALSE );
+    fgOpenWindow( window, title, positionUse, x, y, sizeUse, w, h, gameMode,
+                  (GLboolean)(parent ? GL_TRUE : GL_FALSE) );
 
     return window;
 }
@@ -128,38 +121,25 @@ SFG_Window* fgCreateWindow( SFG_Window* parent, const char* title,
  */
 SFG_Menu* fgCreateMenu( FGCBMenu menuCallback )
 {
-    int x = 100, y = 100, w = 100, h = 100;
-    SFG_Window *current_window = fgStructure.Window;
+    int x = 100, y = 100, w = 1, h = 1;
+    SFG_Window *current_window = fgStructure.CurrentWindow;
 
-    /*
-     * Have the menu object created
-     */
+    /* Have the menu object created */
     SFG_Menu* menu = (SFG_Menu *)calloc( sizeof(SFG_Menu), 1 );
-    int fakeArgc = 0;
 
-    /*
-     * If the freeglut internals haven't been initialized yet,
-     * do it now. Hack's idea courtesy of Chris Purnell...
-     */
-    if( !fgState.Initialised )
-        glutInit( &fakeArgc, NULL );
+    menu->ParentWindow = NULL;
 
-    menu->ParentWindow = fgStructure.Window;
+    /* Create a window for the menu to reside in. */
 
-    /*
-     * Create a window for the menu to reside in.
-     */
-
-    fgCreateWindow( NULL, NULL, x, y, w, h, GL_FALSE, GL_TRUE );
-    menu->Window = fgStructure.Window;
+    fgCreateWindow( NULL, "freeglut menu", GL_TRUE, x, y, GL_TRUE, w, h,
+                    GL_FALSE, GL_TRUE );
+    menu->Window = fgStructure.CurrentWindow;
     glutDisplayFunc( fgDisplayMenu );
 
     glutHideWindow( );  /* Hide the window for now */
     fgSetWindow( current_window );
 
-    /*
-     * Initialize the object properties:
-     */
+    /* Initialize the object properties: */
     menu->ID       = ++fgStructure.MenuID;
     menu->Callback = menuCallback;
     menu->ActiveEntry = NULL;
@@ -167,10 +147,8 @@ SFG_Menu* fgCreateMenu( FGCBMenu menuCallback )
     fgListInit( &menu->Entries );
     fgListAppend( &fgStructure.Menus, &menu->Node );
 
-    /*
-     * Newly created menus implicitly become current ones
-     */
-    fgStructure.Menu = menu;
+    /* Newly created menus implicitly become current ones */
+    fgStructure.CurrentMenu = menu;
 
     return menu;
 }
@@ -187,11 +165,9 @@ void fgAddToWindowDestroyList( SFG_Window* window )
     new_list_entry->window = window;
     fgListAppend( &fgStructure.WindowsToDestroy, &new_list_entry->node );
 
-    /*
-     * Check if the window is the current one...
-     */
-    if( fgStructure.Window == window )
-        fgStructure.Window = NULL;
+    /* Check if the window is the current one... */
+    if( fgStructure.CurrentWindow == window )
+        fgStructure.CurrentWindow = NULL;
 
     /*
      * Clear all window callbacks except Destroy, which will
@@ -202,8 +178,8 @@ void fgAddToWindowDestroyList( SFG_Window* window )
      * to ensure that they are no longer called after this point.
      */
     {
-        FGCBDestroy destroy = FETCH_WCB( *window, Destroy );
-        fgClearCallBacks( window );
+        FGCBDestroy destroy = (FGCBDestroy)FETCH_WCB( *window, Destroy );
+        fghClearCallBacks( window );
         SET_WCB( *window, Destroy, destroy );
     }
 }
@@ -229,16 +205,14 @@ void fgCloseWindows( )
  */
 void fgDestroyWindow( SFG_Window* window )
 {
-    int menu_index;
-
-    assert( window );
-    freeglut_assert_ready;
+    FREEGLUT_INTERNAL_ERROR_EXIT ( window, "Window destroy function called with null window",
+                                   "fgDestroyWindow" );
 
     while( window->Children.First )
         fgDestroyWindow( ( SFG_Window * )window->Children.First );
 
     {
-        SFG_Window *activeWindow = fgStructure.Window;
+        SFG_Window *activeWindow = fgStructure.CurrentWindow;
         INVOKE_WCB( *window, Destroy, ( ) );
         fgSetWindow( activeWindow );
     }
@@ -251,15 +225,11 @@ void fgDestroyWindow( SFG_Window* window )
     if( window->ActiveMenu )
       fgDeactivateMenu( window );
 
-    for( menu_index = 0; menu_index < 3; menu_index ++ )
-        if( window->Menu[ menu_index ] )
-            window->Menu[ menu_index ]->ParentWindow = NULL;
-
-    fgClearCallBacks( window );
+    fghClearCallBacks( window );
     fgCloseWindow( window );
     free( window );
-    if( fgStructure.Window == window )
-        fgStructure.Window = NULL;
+    if( fgStructure.CurrentWindow == window )
+        fgStructure.CurrentWindow = NULL;
 }
 
 /*
@@ -271,17 +241,19 @@ static void fghRemoveMenuFromWindow( SFG_Window* window, SFG_Menu* menu )
     SFG_Window *subWindow;
     int i;
 
+    /* Check whether this is the active menu in the window */
+    if ( menu == window->ActiveMenu )
+        window->ActiveMenu = NULL ;
+
     /*
      * Check if the menu is attached to the current window,
      * if so, have it detached (by overwriting with a NULL):
      */
-    for( i = 0; i < 3; i++ )
+    for( i = 0; i < FREEGLUT_MAX_MENUS; i++ )
         if( window->Menu[ i ] == menu )
             window->Menu[ i ] = NULL;
 
-    /*
-     * Call this function for all of the window's children recursively:
-     */
+    /* Call this function for all of the window's children recursively: */
     for( subWindow = (SFG_Window *)window->Children.First;
          subWindow;
          subWindow = (SFG_Window *)subWindow->Node.Next)
@@ -312,20 +284,16 @@ void fgDestroyMenu( SFG_Menu* menu )
     SFG_Window *window;
     SFG_Menu *from;
 
-    assert( menu );
-    freeglut_assert_ready;
+    FREEGLUT_INTERNAL_ERROR_EXIT ( menu, "Menu destroy function called with null menu",
+                                   "fgDestroyMenu" );
 
-    /*
-     * First of all, have all references to this menu removed from all windows:
-     */
+    /* First of all, have all references to this menu removed from all windows: */
     for( window = (SFG_Window *)fgStructure.Windows.First;
          window;
          window = (SFG_Window *)window->Node.Next )
         fghRemoveMenuFromWindow( window, menu );
 
-    /*
-     * Now proceed with removing menu entries that lead to this menu
-     */
+    /* Now proceed with removing menu entries that lead to this menu */
     for( from = ( SFG_Menu * )fgStructure.Menus.First;
          from;
          from = ( SFG_Menu * )from->Node.Next )
@@ -337,10 +305,10 @@ void fgDestroyMenu( SFG_Menu* menu )
      */
     if( menu->Destroy )
     {
-        SFG_Menu *activeMenu=fgStructure.Menu;
-        fgStructure.Menu = menu;
+        SFG_Menu *activeMenu=fgStructure.CurrentMenu;
+        fgStructure.CurrentMenu = menu;
         menu->Destroy( );
-        fgStructure.Menu = activeMenu;
+        fgStructure.CurrentMenu = activeMenu;
     }
 
     /*
@@ -360,12 +328,12 @@ void fgDestroyMenu( SFG_Menu* menu )
         free( entry );
     }
 
-    if( fgStructure.Window == menu->Window )
-        fgSetWindow( menu->ParentWindow );
+    if( fgStructure.CurrentWindow == menu->Window )
+        fgSetWindow( NULL );
     fgDestroyWindow( menu->Window );
     fgListRemove( &fgStructure.Menus, &menu->Node );
-    if( fgStructure.Menu == menu )
-        fgStructure.Menu = NULL;
+    if( fgStructure.CurrentMenu == menu )
+        fgStructure.CurrentMenu = NULL;
 
     free( menu );
 }
@@ -387,6 +355,13 @@ void fgCreateStructure( void )
     fgListInit(&fgStructure.Windows);
     fgListInit(&fgStructure.Menus);
     fgListInit(&fgStructure.WindowsToDestroy);
+
+    fgStructure.CurrentWindow = NULL;
+    fgStructure.CurrentMenu = NULL;
+    fgStructure.MenuContext = NULL;
+    fgStructure.GameModeWindow = NULL;
+    fgStructure.WindowID = 0;
+    fgStructure.MenuID = 0;
 }
 
 /*
@@ -396,16 +371,10 @@ void fgCreateStructure( void )
  */
 void fgDestroyStructure( void )
 {
-    freeglut_assert_ready;
-
-    /*
-     * Clean up the WindowsToDestroy list.
-     */
+    /* Clean up the WindowsToDestroy list. */
     fgCloseWindows( );
 
-    /*
-     * Make sure all windows and menus have been deallocated
-     */
+    /* Make sure all windows and menus have been deallocated */
     while( fgStructure.Menus.First )
         fgDestroyMenu( ( SFG_Menu * )fgStructure.Menus.First );
 
@@ -416,16 +385,15 @@ void fgDestroyStructure( void )
 /*
  * Helper function to enumerate through all registered top-level windows
  */
-void fgEnumWindows( FGCBenumerator enumCallback, SFG_Enumerator* enumerator )
+void fgEnumWindows( FGCBWindowEnumerator enumCallback, SFG_Enumerator* enumerator )
 {
     SFG_Window *window;
 
-    assert( enumCallback && enumerator );
-    freeglut_assert_ready;
+    FREEGLUT_INTERNAL_ERROR_EXIT ( enumCallback && enumerator,
+                                   "Enumerator or callback missing from window enumerator call",
+                                   "fgEnumWindows" );
 
-    /*
-     * Check every of the top-level windows
-     */
+    /* Check every of the top-level windows */
     for( window = ( SFG_Window * )fgStructure.Windows.First;
          window;
          window = ( SFG_Window * )window->Node.Next )
@@ -437,16 +405,40 @@ void fgEnumWindows( FGCBenumerator enumCallback, SFG_Enumerator* enumerator )
 }
 
 /*
+ * Helper function to enumerate through all registered top-level windows
+ */
+void fgEnumMenus( FGCBMenuEnumerator enumCallback, SFG_Enumerator* enumerator )
+{
+    SFG_Menu *menu;
+    
+    FREEGLUT_INTERNAL_ERROR_EXIT ( enumCallback && enumerator,
+    "Enumerator or callback missing from window enumerator call",
+    "fgEnumWindows" );
+    
+    /* It's enough to check all entries in fgStructure.Menus... */
+    for( menu = (SFG_Menu *)fgStructure.Menus.First;
+        menu;
+        menu = (SFG_Menu *)menu->Node.Next )
+    {
+        enumCallback( menu, enumerator );
+        if( enumerator->found )
+            return;
+    }
+}
+
+/*
  * Helper function to enumerate through all a window's subwindows
  * (single level descent)
  */
-void fgEnumSubWindows( SFG_Window* window, FGCBenumerator enumCallback,
+void fgEnumSubWindows( SFG_Window* window, FGCBWindowEnumerator enumCallback,
                        SFG_Enumerator* enumerator )
 {
     SFG_Window *child;
 
-    assert( enumCallback && enumerator );
-    freeglut_assert_ready;
+    FREEGLUT_INTERNAL_ERROR_EXIT ( enumCallback && enumerator,
+                                   "Enumerator or callback missing from subwindow enumerator call",
+                                   "fgEnumSubWindows" );
+    FREEGLUT_INTERNAL_ERROR_EXIT_IF_NOT_INITIALISED ( "Window Enumeration" );
 
     for( child = ( SFG_Window * )window->Children.First;
          child;
@@ -467,9 +459,7 @@ static void fghcbWindowByHandle( SFG_Window *window,
     if ( enumerator->found )
         return;
 
-    /*
-     * Check the window's handle. Hope this works. Looks ugly. That's for sure.
-     */
+    /* Check the window's handle. Hope this works. Looks ugly. That's for sure. */
     if( window->Window.Handle == (SFG_WindowHandleType) (enumerator->data) )
     {
         enumerator->found = GL_TRUE;
@@ -478,9 +468,7 @@ static void fghcbWindowByHandle( SFG_Window *window,
         return;
     }
 
-    /*
-     * Otherwise, check this window's children
-     */
+    /* Otherwise, check this window's children */
     fgEnumSubWindows( window, fghcbWindowByHandle, enumerator );
 }
 
@@ -493,9 +481,7 @@ SFG_Window* fgWindowByHandle ( SFG_WindowHandleType hWindow )
 {
     SFG_Enumerator enumerator;
 
-    /*
-     * This is easy and makes use of the windows enumeration defined above
-     */
+    /* This is easy and makes use of the windows enumeration defined above */
     enumerator.found = GL_FALSE;
     enumerator.data = (void *)hWindow;
     fgEnumWindows( fghcbWindowByHandle, &enumerator );
@@ -510,15 +496,11 @@ SFG_Window* fgWindowByHandle ( SFG_WindowHandleType hWindow )
  */
 static void fghcbWindowByID( SFG_Window *window, SFG_Enumerator *enumerator )
 {
-    /*
-     * Make sure we do not overwrite our precious results...
-     */
+    /* Make sure we do not overwrite our precious results... */
     if( enumerator->found )
         return;
 
-    /*
-     * Check the window's handle. Hope this works. Looks ugly. That's for sure.
-     */
+    /* Check the window's handle. Hope this works. Looks ugly. That's for sure. */
     if( window->ID == *( int *)(enumerator->data) )
     {
         enumerator->found = GL_TRUE;
@@ -527,14 +509,12 @@ static void fghcbWindowByID( SFG_Window *window, SFG_Enumerator *enumerator )
         return;
     }
 
-    /*
-     * Otherwise, check this window's children
-     */
+    /* Otherwise, check this window's children */
     fgEnumSubWindows( window, fghcbWindowByID, enumerator );
 }
 
 /*
- * This function is similiar to the previous one, except it is
+ * This function is similar to the previous one, except it is
  * looking for a specified (sub)window identifier. The function
  * is defined in freeglut_structure.c file.
  */
@@ -542,9 +522,7 @@ SFG_Window* fgWindowByID( int windowID )
 {
     SFG_Enumerator enumerator;
 
-    /*
-     * Uses a method very similiar for fgWindowByHandle...
-     */
+    /* Uses a method very similar for fgWindowByHandle... */
     enumerator.found = GL_FALSE;
     enumerator.data = ( void * )&windowID;
     fgEnumWindows( fghcbWindowByID, &enumerator );
@@ -555,22 +533,75 @@ SFG_Window* fgWindowByID( int windowID )
 
 /*
  * Looks up a menu given its ID. This is easier that fgWindowByXXX
- * as all menus are placed in a single doubly linked list...
+ * A static helper function to look for a menu given its ID
+ */
+static void fghcbMenuByID( SFG_Menu *menu, SFG_Enumerator *enumerator )
+{
+    if ( enumerator->found )
+        return;
+
+    /* Check the menu's ID. */
+    if( (ssize_t) menu->ID == (ssize_t)(enumerator->data) )
+    {
+        enumerator->found = GL_TRUE;
+        enumerator->data = menu;
+        
+        return;
+    }
+}
+
+/*
+ * Looks up a menu given its ID. This is easier than fgWindowByXXX
+ * as all menus are placed in one doubly linked list...
  */
 SFG_Menu* fgMenuByID( int menuID )
 {
-    SFG_Menu *menu = NULL;
+    SFG_Enumerator enumerator;
 
-    freeglut_assert_ready;
+    /* This is easy and makes use of the menus enumeration defined above */
+    enumerator.found = GL_FALSE;
+    enumerator.data = (void *)(ssize_t)menuID;
+    fgEnumMenus( fghcbMenuByID, &enumerator );
+    
+    if( enumerator.found )
+        return( SFG_Menu *) enumerator.data;
+    
+    return NULL;
+}
 
-    /*
-     * It's enough to check all entries in fgStructure.Menus...
-     */
-    for( menu = (SFG_Menu *)fgStructure.Menus.First;
-         menu;
-         menu = (SFG_Menu *)menu->Node.Next )
-        if( menu->ID == menuID )
-            return menu;
+/*
+ * A static helper function to look for an active menu
+ */
+static void fghcbGetActiveMenu( SFG_Menu *menu, SFG_Enumerator *enumerator )
+{
+    if ( enumerator->found )
+        return;
+    
+    /* Check the menu's ID. */
+    if( menu->IsActive )
+    {
+        enumerator->found = GL_TRUE;
+        enumerator->data = menu;
+        
+        return;
+    }
+}
+
+/*
+ * Returns active menu, if any. Assumption: only one menu active throughout application at any one time.
+ * This is easier than fgWindowByXXX as all menus are placed in one doubly linked list...
+ */
+SFG_Menu* fgGetActiveMenu( )
+{
+    SFG_Enumerator enumerator;
+    
+    /* This is easy and makes use of the menus enumeration defined above */
+    enumerator.found = GL_FALSE;
+    fgEnumMenus( fghcbGetActiveMenu, &enumerator );
+    
+    if( enumerator.found )
+        return( SFG_Menu *) enumerator.data;
+    
     return NULL;
 }
 

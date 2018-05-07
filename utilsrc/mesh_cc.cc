@@ -9,15 +9,18 @@ out only selected components of the object.
 Does the same thing as "plycomps", part of the plytools package by Greg Turk.
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
-#include <cstdio>
-#include <cstdlib>
-#ifdef _MSC_VER
-#include <getopt.h>
+#ifdef _WIN32
+# include "wingetopt.h"
 #else
-#include <unistd.h>
+# include <unistd.h>
 #endif
+#include <cstdio>
 using namespace std;
 using namespace trimesh;
 
@@ -29,8 +32,8 @@ using namespace trimesh;
 // smaller than lessthan.  The largest min(nprint, total) components are
 // printed out, unless morethan == 0 and lessthan != BIGNUM, in which case
 // the smallest min(nprint, total) components are printed
-void print_comps(const vector<size_t> &compsizes,
-		 int morethan, int lessthan, int total, int nprint)
+void print_comps(const vector<int> &compsizes,
+                 int morethan, int lessthan, int total, int nprint)
 {
 	printf("%lu connected components total.\n",
 		(unsigned long) compsizes.size());
@@ -107,8 +110,8 @@ int main(int argc, char *argv[])
 	in->tstrips.clear();
 
 	// Find connected components
-	vector<size_t> comps;
-	vector<size_t> compsizes;
+	vector<int> comps;
+	vector<int> compsizes;
 	find_comps(in, comps, compsizes, conn_vert);
 
 	// Print out the top few components
@@ -138,7 +141,7 @@ int main(int argc, char *argv[])
 			if (had_tstrips)
 				tmp->need_tstrips();
 			char filename[1024];
-			sprintf_s(filename, "cc%d-%s", i+1, outfilename);
+			sprintf(filename, "cc%d-%s", i+1, outfilename);
 			tmp->write(filename);
 			delete tmp;
 		}

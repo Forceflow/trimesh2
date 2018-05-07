@@ -65,7 +65,7 @@ bool bad_face(const TriMesh *themesh, int i)
 	const int &i0 = themesh->faces[i][0];
 	const int &i1 = themesh->faces[i][1];
 	const int &i2 = themesh->faces[i][2];
-	const size_t nv = themesh->vertices.size();
+	const int nv = themesh->vertices.size();
 
 	if ((i0 >= 0) && (i0 < nv) &&
 	    (i1 >= 0) && (i1 < nv) &&
@@ -123,8 +123,8 @@ public:
 // meet at that edge, and complains if there is more than one forwards and one
 // backwards.  Returns true iff this is a weird edge.
 bool bad_edge(const TriMesh *themesh,
-	      int v1, int v2,
-	      const vector<bool> &bad_faces)
+              int v1, int v2,
+              const vector<bool> &bad_faces)
 {
 	int numforwards = 0, numbackwards = 0;
 
@@ -137,9 +137,9 @@ bool bad_edge(const TriMesh *themesh,
 		for (int j = 0; j < 3; j++) {
 			if (f[j] != v1)
 				continue;
-			if (f[(j+1)%3] == v2)
+			if (f[NEXT_MOD3(j)] == v2)
 				numforwards++;
-			else if (f[(j+2)%3] == v2)
+			else if (f[PREV_MOD3(j)] == v2)
 				numbackwards++;
 		}
 	}
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
 	printf("Found %d bogus triangles... Done.\n", num_bad_faces);
 
 
-	// To make it easier to detect duplicate faces, we're now going to 
+	// To make it easier to detect duplicate faces, we're now going to
 	// sort the vertex indices of each face.  When we're doing that,
 	// though, we need to record whether we changed the current cyclic
 	// ordering.

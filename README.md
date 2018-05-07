@@ -1,8 +1,6 @@
-# TriMesh2
+# TriMesh2 (2.13)
 
 A C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes.
-
-**Note:** I'm merging Trimesh 2.13 changes in the dev branch. Switch if you want more recent - but possibly buggy - code!
 
 ![trimesh2 logo](https://raw.githubusercontent.com/Forceflow/trimesh2/master/html/trimesh_logo.jpg)
 
@@ -10,8 +8,9 @@ This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimes
  
 ## Getting started
  * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
-   * For **Windows**, Visual Studio Community Edition 2015 and 2017 solutions are in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
-   * For **Linux**, a makefile is provided. You might need additional packages. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev`.
+   * For **Windows**, A Visual Studio Community Edition 2017 solutions is in the *mscv* folder. The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
+   * For **Linux**, a makefile is provided. You might need additional packages before you can build on your system. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
+   * I'm being told it builds on **OSX** using the provided makefile too, but I have no way to check. If you encounter problems, please, file an issue report :)
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
  * For inspiration on how to use the library, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`
 
@@ -44,14 +43,12 @@ The following utility programs are included:
 
 ## Fork Details
 
-The original TriMesh2 project was very Linux/GCC-oriented, and only had limited Win32 support. The primary aim of this fork is to provide a stable MSVC solution, for both x86 and x64 targets. For several tools, TriMesh2 depends on a custom-cherrypicked freeglut version - dragging this kicking and screaming into the new century is also part of the challenge.
+The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited Win32 support (through MinGW compilation targets). The primary aim of this fork is to provide a stable MSVC and easy to build solution, for both x86 and x64 targets.
 
 Notable changes/additions to vanilla trimesh2
- * Fixes for MSVC 12.0 / 14.0 compilation
- * MSVC project for Visual Studio 2013 professional
- * MSVC project for Visual Studio Community Edition 2015
- * Fixes for OpenMP compilation in VS 2015
- * Fixes for FreeGlut / Gluit compilation in VS 2015
+ * Fixes for MSVC 14.0 compilation
+ * MSVC project for Visual Studio Community Edition 2017
+ * Fixes for FreeGlut / Gluit compilation in VS 2017
  * Added (experimental) 64-bit MSVC compilation support
 
 For todo/planned features, see todo.txt.

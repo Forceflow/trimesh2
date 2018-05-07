@@ -24,7 +24,7 @@
 #ifndef  FREEGLUT_TEAPOT_DATA_H
 #define  FREEGLUT_TEAPOT_DATA_H
 
-#if TARGET_HOST_WINCE
+#if defined(_WIN32_WCE)
 /*
  * Submitted through the kind offices of Daniel Wagner (daniel@ims.tuwien.ac.at)
  */
@@ -566,7 +566,7 @@ const float vertices[530][3] =  {
 };
 
 
-// 530 normals
+/* 530 normals */
 const int numNormals = 530;
 const float normals[530][3] = {
 0.0486f, -0.9986f, 0.0168f, 
@@ -1101,11 +1101,11 @@ const float normals[530][3] = {
 -0.623f, -0.5156f, -0.5881f
 };
 
-// 1 color
-//255 255 0
+/* 1 color   */
+/*255 255 0  */
 
-// 1024 faces
-// numIdx fidx0 fidx1 fidx2 nidx0 nidx1 nidx2 coloridx
+/* 1024 faces */
+/* numIdx fidx0 fidx1 fidx2 nidx0 nidx1 nidx2 coloridx */
 
 const int numFaces = 1024;
 const int faces[1024][8] = {
@@ -2305,7 +2305,7 @@ const int strip_normals[] = {
 31, 31, 118, 237, 205, 449, 186, 470, 496, 494, 176, 155, 429, 112, 185, 89, 185, 421, 94, 300, 379, 170, -1
 };
 
-#else  /* TARGET_HOST_WINCE */
+#else  /* defined(_WIN32_WCE) */
 
 /*
  * Original teapot code copyright follows:
@@ -2422,7 +2422,8 @@ static double tex[2][2][2] =
     { {0.0, 0.0}, {1.0, 0.0} },
     { {0.0, 1.0}, {1.0, 1.0} }
 };
-#endif  /* TARGET_HOST_WINCE */
+#endif  /* defined(_WIN32_WCE) */
 
 
 #endif  /* FREEGLUT_TEAPOT_DATA_H */
+

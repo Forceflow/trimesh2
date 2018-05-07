@@ -1,10 +1,8 @@
-# DEBUG = y
-MAKERULESDIR = ..
 DESTDIR = ../bin.$(UNAME)
-INCLUDES = -I../include
+INCLUDES = -I../include -I.
 LIBDIR = -L../lib.$(UNAME)
 
-include $(MAKERULESDIR)/Makerules
+include ../Makerules
 
 VIEWSOURCES =	mesh_view.cc
 
@@ -18,6 +16,7 @@ OTHERSOURCES =	mesh_align.cc \
 		mesh_info.cc \
 		mesh_make.cc \
 		mesh_shade.cc \
+		grid_subsamp.cc \
 		xf.cc
 
 VIEWOFILES = $(addprefix $(OBJDIR)/,$(VIEWSOURCES:.cc=.o))
@@ -32,17 +31,16 @@ default: $(PROGS)
 
 
 LIBS += -ltrimesh
+$(PROGS) : -ltrimesh
+
 $(VIEWPROG) : $(VIEWOFILES)
 	$(LINK) $(GLLIBS)
 
 $(OTHERPROGS) : $(DESTDIR)/%$(EXE) : $(OBJDIR)/%.o
 	$(LINK)
 
-$(PROGS) : ../lib.$(UNAME)/libtrimesh.a
-
 clean :
-	-rm -f $(OFILES) $(OBJDIR)/Makedepend $(OBJDIR)/*.d
-	-rm -rf $(OBJDIR)/ii_files
+	-rm -f $(OBJDIR)/*.o $(OBJDIR)/*.d
 	-rmdir $(OBJDIR)
 
 spotless : clean

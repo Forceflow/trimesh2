@@ -407,10 +407,6 @@ add_spinner_to_panel( GLUI_Panel *panel, const char *name,
 
   control = new GLUI_Spinner;
  
-  if ( NOT strcmp( name, "Spinner Test" ))
-    id=id;
-
-
   if ( control ) {
     if ( data_type == GLUI_SPINNER_INT ) {
       text_type = GLUI_EDITTEXT_INT;

@@ -23,7 +23,6 @@ void remove_vertices(TriMesh *mesh, const vector<bool> &toremove)
 	if (!nv)
 		return;
 
-	dprintf("Removing vertices... ");
 	vector<int> remap_table(nv);
 	int next = 0;
 	for (int i = 0; i < nv; i++) {
@@ -34,13 +33,11 @@ void remove_vertices(TriMesh *mesh, const vector<bool> &toremove)
 	}
 
 	// Nothing to delete?
-	if (next == nv) {
-		dprintf("None removed.\n");
+	if (next == nv)
 		return;
-	}
 
+	dprintf("Removing vertices... ");
 	remap_verts(mesh, remap_table);
-
 	dprintf("%d vertices removed... Done.\n", nv - next);
 }
 
@@ -63,7 +60,7 @@ void remove_unused_vertices(TriMesh *mesh)
 	}
 	remove_vertices(mesh, unused);
 	if (!had_faces)
-		mesh->faces.clear();
+		mesh->clear_faces();
 }
 
 
@@ -78,12 +75,11 @@ void remove_faces(TriMesh *mesh, const vector<bool> &toremove)
 	if (!numfaces)
 		return;
 
-	mesh->tstrips.clear();
-	mesh->adjacentfaces.clear();
-	mesh->neighbors.clear();
-	mesh->across_edge.clear();
-	mesh->cornerareas.clear();
-	mesh->pointareas.clear();
+	mesh->clear_tstrips();
+	mesh->clear_adjacentfaces();
+	mesh->clear_neighbors();
+	mesh->clear_across_edge();
+	mesh->clear_pointareas();
 
 	dprintf("Removing faces... ");
 	int next = 0;
@@ -103,7 +99,7 @@ void remove_faces(TriMesh *mesh, const vector<bool> &toremove)
 	if (had_tstrips)
 		mesh->need_tstrips();
 	if (!had_faces)
-		mesh->faces.clear();
+		mesh->clear_faces();
 
 	mesh->bbox.valid = false;
 	mesh->bsphere.valid = false;
@@ -139,4 +135,4 @@ void remove_sliver_faces(TriMesh *mesh)
 	remove_faces(mesh, toremove);
 }
 
-}; // namespace trimesh
+} // namespace trimesh

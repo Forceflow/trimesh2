@@ -10,23 +10,30 @@ Simple viewer
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#define FREEGLUT_STATIC
-
 #include "TriMesh.h"
+#include "TriMesh_algo.h"
 #include "XForm.h"
 #include "GLCamera.h"
+#include "GLManager.h"
 #include "ICP.h"
 #include "strutil.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <GL/glut.h>
+#ifdef __APPLE__
+# include <GLUT/glut.h>
+#else
+# include <GL/freeglut.h>
+#endif
 using namespace std;
 using namespace trimesh;
 
+#include "shaders.inc"
+
 
 // Globals
+static const char myname[] = "mesh_view";
 vector<TriMesh *> meshes;
 vector<xform> xforms;
 vector<bool> visible;
@@ -34,19 +41,23 @@ vector<string> filenames;
 
 TriMesh::BSphere global_bsph;
 xform global_xf;
+GLManager gl;
 GLCamera camera;
 
 int current_mesh = -1;
 
-bool draw_edges = false;
-bool draw_points = false;
 bool draw_2side = false;
-bool draw_shiny = true;
-bool draw_lit = true;
+bool draw_edges = false;
 bool draw_falsecolor = false;
+bool draw_flat = true;
 bool draw_index = false;
+bool draw_lit = true;
+bool draw_meshcolor = true;
+bool draw_points = false;
+bool draw_shiny = true;
 bool white_bg = false;
 bool grab_only = false;
+bool avoid_tstrips = false;
 int point_size = 1, line_width = 1;
 
 
@@ -57,216 +68,6 @@ void need_redraw()
 }
 
 
-// Clear the screen
-void cls()
-{
-	glDisable(GL_DITHER);
-	glDisable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_NORMALIZE);
-	glDisable(GL_LIGHTING);
-	glDisable(GL_NORMALIZE);
-	glDisable(GL_COLOR_MATERIAL);
-	if (white_bg)
-		glClearColor(1, 1, 1, 0);
-	else
-		glClearColor(0.08f, 0.08f, 0.08f, 0);
-	glClearDepth(1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-
-
-// Set up lights and materials
-void setup_lighting(int id)
-{
-	Color c(1.0f);
-	if (draw_falsecolor)
-		c = Color::hsv(-3.88f * id, 0.6f + 0.2f * sin(0.42f * id), 1);
-	glColor3fv(c);
-
-	if (!draw_lit || meshes[id]->normals.empty()) {
-		glDisable(GL_LIGHTING);
-		return;
-	}
-
-	GLfloat mat_specular[4] = { 0.18f, 0.18f, 0.18f, 0.18f };
-	if (!draw_shiny) {
-		mat_specular[0] = mat_specular[1] =
-		mat_specular[2] = mat_specular[3] = 0.0f;
-	}
-	GLfloat mat_shininess[] = { 64 };
-	GLfloat global_ambient[] = { 0.02f, 0.02f, 0.05f, 0.05f };
-	GLfloat light0_ambient[] = { 0, 0, 0, 0 };
-	GLfloat light0_diffuse[] = { 0.85f, 0.85f, 0.8f, 0.85f };
-	if (current_mesh >= 0 && id != current_mesh) {
-		light0_diffuse[0] *= 0.5f;
-		light0_diffuse[1] *= 0.5f;
-		light0_diffuse[2] *= 0.5f;
-	}
-	GLfloat light1_diffuse[] = { -0.01f, -0.01f, -0.03f, -0.03f };
-	GLfloat light0_specular[] = { 0.85f, 0.85f, 0.85f, 0.85f };
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, light0_ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
-	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
-	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, draw_2side);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_LIGHT1);
-	glEnable(GL_COLOR_MATERIAL);
-	glEnable(GL_NORMALIZE);
-}
-
-
-// Draw triangle strips.  They are stored as length followed by values.
-void draw_tstrips(const TriMesh *themesh)
-{
-	static bool use_glArrayElement = false;
-	static bool tested_renderer = false;
-	if (!tested_renderer) {
-		use_glArrayElement = !!strstr(
-			(const char *) glGetString(GL_RENDERER), "Intel");
-		tested_renderer = true;
-	}
-
-	const int *t = &themesh->tstrips[0];
-	const int *end = t + themesh->tstrips.size();
-	if (use_glArrayElement) {
-		while (likely(t < end)) {
-			glBegin(GL_TRIANGLE_STRIP);
-			int striplen = *t++;
-			for (int i = 0; i < striplen; i++)
-				glArrayElement(*t++);
-			glEnd();
-		}
-	} else {
-		while (likely(t < end)) {
-			int striplen = *t++;
-			glDrawElements(GL_TRIANGLE_STRIP, striplen, GL_UNSIGNED_INT, t);
-			t += striplen;
-		}
-	}
-}
-
-
-// Draw the mesh
-void draw_mesh(int i)
-{
-	const TriMesh *themesh = meshes[i];
-
-	glPushMatrix();
-	glMultMatrixd(xforms[i]);
-
-	glDepthFunc(GL_LESS);
-	glEnable(GL_DEPTH_TEST);
-
-	if (draw_2side) {
-		glDisable(GL_CULL_FACE);
-	} else {
-		glCullFace(GL_BACK);
-		glEnable(GL_CULL_FACE);
-	}
-
-	// Vertices
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(3, GL_FLOAT,
-			sizeof(themesh->vertices[0]),
-			&themesh->vertices[0][0]);
-
-	// Normals
-	if (!themesh->normals.empty() && !draw_index) {
-		glEnableClientState(GL_NORMAL_ARRAY);
-		glNormalPointer(GL_FLOAT,
-				sizeof(themesh->normals[0]),
-				&themesh->normals[0][0]);
-	} else {
-		glDisableClientState(GL_NORMAL_ARRAY);
-	}
-
-	// Colors
-	if (!themesh->colors.empty() && !draw_falsecolor && !draw_index) {
-		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(3, GL_FLOAT,
-			       sizeof(themesh->colors[0]),
-			       &themesh->colors[0][0]);
-	} else {
-		glDisableClientState(GL_COLOR_ARRAY);
-	}
-
-	// Main drawing pass
-	if (draw_points || themesh->tstrips.empty()) {
-		// No triangles - draw as points
-		glPointSize(float(point_size));
-		glDrawArrays(GL_POINTS, 0, themesh->vertices.size());
-		glPopMatrix();
-		return;
-	}
-
-	if (draw_edges) {
-		glPolygonOffset(10.0f, 10.0f);
-		glEnable(GL_POLYGON_OFFSET_FILL);
-	}
-
-	draw_tstrips(themesh);
-	glDisable(GL_POLYGON_OFFSET_FILL);
-
-	// Edge drawing pass
-	if (draw_edges) {
-		glPolygonMode(GL_FRONT, GL_LINE);
-		glLineWidth(float(line_width));
-		glDisableClientState(GL_COLOR_ARRAY);
-		glDisable(GL_COLOR_MATERIAL);
-		GLfloat global_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-		GLfloat light0_diffuse[] = { 0.8f, 0.8f, 0.8f, 0.0f };
-		GLfloat light1_diffuse[] = { -0.2f, -0.2f, -0.2f, 0.0f };
-		GLfloat light0_specular[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
-		glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
-		glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
-		GLfloat mat_diffuse[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_diffuse);
-		glColor3f(0, 0, 1); // Used iff unlit
-		draw_tstrips(themesh);
-		glPolygonMode(GL_FRONT, GL_FILL);
-	}
-
-	glPopMatrix();
-}
-
-
-// Draw the scene
-void redraw()
-{
-	timestamp t = now();
-	camera.setupGL(global_xf * global_bsph.center, global_bsph.r);
-	glPushMatrix();
-	glMultMatrixd(global_xf);
-	cls();
-	for (size_t i = 0; i < meshes.size(); i++) {
-		if (!visible[i])
-			continue;
-		setup_lighting(i);
-		draw_mesh(i);
-	}
-
-	glPopMatrix();
-	glutSwapBuffers();
-	if (grab_only) {
-		void dump_image();
-		dump_image();
-		exit(0);
-	}
-	printf("\r                        \r%.1f msec.", 1000.0f * (now() - t));
-	fflush(stdout);
-}
-
-
 // Update global bounding sphere.
 void update_bsph()
 {
@@ -274,7 +75,7 @@ void update_bsph()
 	point boxmax(-1e38f, -1e38f, -1e38f);
 	bool some_vis = false;
 	for (size_t i = 0; i < meshes.size(); i++) {
-		if (!visible[i])	
+		if (!visible[i])
 			continue;
 		some_vis = true;
 		point c = xforms[i] * meshes[i]->bsphere.center;
@@ -291,12 +92,309 @@ void update_bsph()
 	gc = 0.5f * (boxmin + boxmax);
 	gr = 0.0f;
 	for (size_t i = 0; i < meshes.size(); i++) {
-		if (!visible[i])	
+		if (!visible[i])
 			continue;
 		point c = xforms[i] * meshes[i]->bsphere.center;
 		float r = meshes[i]->bsphere.r;
 		gr = max(gr, dist(c, gc) + r);
 	}
+}
+
+
+// Handle auto-spin
+bool autospin()
+{
+	xform tmp_xf = global_xf;
+	if (current_mesh >= 0)
+		tmp_xf = global_xf * xforms[current_mesh];
+
+	if (!camera.autospin(tmp_xf))
+		return false;
+
+	if (current_mesh >= 0) {
+		xforms[current_mesh] = inv(global_xf) * tmp_xf;
+		update_bsph();
+	} else {
+		global_xf = tmp_xf;
+	}
+	return true;
+}
+
+
+// Initialization performed once we have an OpenGL context
+void initGL()
+{
+	gl.make_shader("unlit", unlit_vert, unlit_frag);
+	gl.make_shader("phong", phong_vert, phong_frag);
+	gl.make_shader("flat", flat_vert, flat_frag);
+	if (gl.slow_tstrips())
+		avoid_tstrips = true;
+}
+
+
+// Clear the screen
+void cls()
+{
+	glDisable(GL_DITHER);
+	glDisable(GL_BLEND);
+	glDisable(GL_LIGHTING);
+	glDisable(GL_COLOR_MATERIAL);
+	if (draw_index)
+		glClearColor(0, 0, 0, 0);
+	else if (white_bg)
+		glClearColor(1, 1, 1, 0);
+	else
+		glClearColor(0.08f, 0.08f, 0.08f, 0);
+	glClearDepth(1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
+}
+
+
+// Return the color to be used in an ID reference image for mesh i
+Color index_color(int i)
+{
+	int steps_per_channel = int(ceil(cbrt(float(meshes.size() + 1))));
+	float scale = 1.0f / (steps_per_channel + 1);
+	Color c;
+	c[0] = scale * ((i + 1) % steps_per_channel);
+	c[1] = scale * (((i + 1) / steps_per_channel) % steps_per_channel);
+	c[2] = scale * ((i + 1) / sqr(steps_per_channel));
+	return c;
+}
+
+
+// Return the false color to be used for mesh i
+Color false_color(int i)
+{
+	return Color::hsv(-3.88f * i, 0.6f + 0.2f * sin(0.42f * i), 1);
+}
+
+
+// Set up color/materials and lights
+void setup_color_and_lighting(int i)
+{
+	Color c(1.0f);
+	if (draw_index)
+		c = index_color(i);
+	else if (draw_falsecolor)
+		c = false_color(i);
+	gl.color3fv(c);
+
+	if (draw_index || !draw_lit) {
+		glDisable(GL_LIGHTING);
+		return;
+	}
+
+	GLfloat mat_specular[4] = { 0.18f, 0.18f, 0.18f, 0.18f };
+	if (!draw_shiny) {
+		mat_specular[0] = mat_specular[1] =
+		mat_specular[2] = mat_specular[3] = 0.0f;
+	}
+	GLfloat mat_shininess[] = { 64 };
+	GLfloat global_ambient[] = { 0, 0, 0, 0 };
+	GLfloat light0_ambient[] = { 0.04f, 0.04f, 0.06f, 0.05f };
+	GLfloat light0_diffuse[] = { 0.85f, 0.85f, 0.8f, 0.85f };
+	if (current_mesh >= 0 && i != current_mesh) {
+		light0_diffuse[0] *= 0.5f;
+		light0_diffuse[1] *= 0.5f;
+		light0_diffuse[2] *= 0.5f;
+	}
+	GLfloat light0_specular[] = { 0.85f, 0.85f, 0.85f, 0.85f };
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light0_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, draw_2side);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_NORMALIZE);
+}
+
+
+// Draw a mesh
+void draw_mesh(int i)
+{
+	TriMesh *mesh = meshes[i];
+	if (!draw_points && avoid_tstrips)
+		mesh->need_faces();
+
+	// Transform
+	glPushMatrix();
+	glMultMatrixd(xforms[i]);
+
+	// Backface culling
+	if (draw_2side) {
+		glDisable(GL_CULL_FACE);
+	} else {
+		glCullFace(GL_BACK);
+		glEnable(GL_CULL_FACE);
+	}
+
+	// Figure out options and passes
+	bool unlit = (!draw_lit || draw_index);
+	bool phong = (!unlit && !draw_flat);
+	bool flat = (!unlit && !phong);
+
+	bool have_faces = avoid_tstrips ? !mesh->faces.empty() :
+		!mesh->tstrips.empty();
+	bool have_colors = !mesh->colors.empty();
+
+	bool points_pass = (draw_points || !have_faces);
+	bool faces_pass = !points_pass;
+	bool edges_pass = (faces_pass && !draw_index && draw_edges);
+
+	bool meshcolor = (!draw_index && !draw_falsecolor &&
+		have_colors && draw_meshcolor);
+
+	// Activate shader and bind data
+	if (unlit)
+		gl.use_shader("unlit");
+	else if (phong)
+		gl.use_shader("phong");
+	else // if (flat)
+		gl.use_shader("flat");
+
+	setup_color_and_lighting(i);
+
+	unsigned buf;
+	if (!(buf = gl.buffer(mesh->vertices)))
+		buf = gl.make_buffer(mesh->vertices);
+	gl.vertexarray3fv(buf);
+
+	if (phong) {
+		if (!(buf = gl.buffer(mesh->normals)))
+			buf = gl.make_buffer(mesh->normals);
+		gl.normalarray3fv(buf);
+	}
+
+	if (meshcolor) {
+		if (!(buf = gl.buffer(mesh->colors)))
+			buf = gl.make_buffer(mesh->colors);
+		gl.colorarray3fv(buf);
+	}
+
+	// Drawing passes
+	if (points_pass) {
+		glPointSize(float(point_size));
+		gl.draw_points(mesh->vertices.size());
+	}
+
+	if (edges_pass) {
+		glPolygonOffset(2.0f, 2.0f);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+	}
+
+	if (faces_pass) {
+		if (avoid_tstrips) {
+			if (!(buf = gl.ibuffer(mesh->faces)))
+				buf = gl.make_ibuffer(mesh->faces);
+			gl.use_ibuffer(buf);
+			gl.draw_tris(mesh->faces.size());
+		} else {
+			if (!(buf = gl.ibuffer(mesh->tstrips)))
+				buf = gl.make_ibuffer(mesh->tstrips);
+			gl.use_ibuffer(buf);
+			gl.draw_tstrips(mesh->tstrips.size());
+		}
+	}
+
+	if (edges_pass) {
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		if (flat) {
+			gl.use_shader("phong");
+			gl.vertexarray3fv(gl.buffer(mesh->vertices));
+			if (!gl.buffer(mesh->normals))
+				gl.make_buffer(mesh->normals);
+			gl.normalarray3fv(gl.buffer(mesh->normals));
+		}
+		gl.color3f(0, 0, 1.0);
+		glPolygonMode(GL_FRONT, GL_LINE);
+		glLineWidth(float(line_width));
+		if (avoid_tstrips) {
+			if (!(buf = gl.ibuffer(mesh->faces)))
+				buf = gl.make_ibuffer(mesh->faces);
+			gl.use_ibuffer(buf);
+			gl.draw_tris(mesh->faces.size());
+		} else {
+			if (!(buf = gl.ibuffer(mesh->tstrips)))
+				buf = gl.make_ibuffer(mesh->tstrips);
+			gl.use_ibuffer(buf);
+			gl.draw_tstrips(mesh->tstrips.size());
+		}
+		glPolygonMode(GL_FRONT, GL_FILL);
+	}
+
+	glPopMatrix();
+	gl.clear_attributes();
+}
+
+
+// Draw the scene
+void redraw()
+{
+	static bool first_time = true;
+	if (first_time) {
+		initGL();
+		first_time = false;
+	}
+
+	static bool starting_up = true;
+	if (starting_up) {
+		// Turn on 1M tris at a time to avoid wait for VBOs
+		size_t turned_on = 0;
+		size_t i = 0;
+		while (i < visible.size()) {
+			if (!visible[i]) {
+				visible[i] = true;
+				void resetview();
+				resetview();
+				void update_title();
+				update_title();
+				need_redraw();
+				turned_on += meshes[i]->vertices.size();
+				if (turned_on >= 1000000)
+					break;
+			}
+			i++;
+		}
+		if (i == visible.size())
+			starting_up = false;
+	}
+
+	timestamp t = now();
+
+	camera.setupGL(global_xf * global_bsph.center, global_bsph.r);
+	glPushMatrix();
+	glMultMatrixd(global_xf);
+	cls();
+
+	for (size_t i = 0; i < meshes.size(); i++) {
+		if (!visible[i])
+			continue;
+		draw_mesh(i);
+	}
+
+	glPopMatrix();
+	glutSwapBuffers();
+	if (grab_only) {
+		void dump_image();
+		dump_image();
+		exit(0);
+	}
+
+	glFinish(); // For timing...
+	printf("\r                        \r%.1f msec.", 1000.0f * (now() - t));
+	fflush(stdout);
+
+	if (autospin())
+		need_redraw();
 }
 
 
@@ -320,7 +418,44 @@ void resetview()
 
 	// else default view
 	global_xf = xform::trans(0, 0, -5.0f * global_bsph.r) *
-		    xform::trans(-global_bsph.center);
+	            xform::trans(-global_bsph.center);
+}
+
+
+#define safe_strcat(dst, src) strncat(dst, src, sizeof(dst) - strlen(dst) - 1)
+
+
+// Set the window title
+void update_title()
+{
+	char title[BUFSIZ/2];
+	title[0] = '\0';
+
+	// First the current mesh, if any
+	if (current_mesh >= 0) {
+		title[0] = '*';
+		title[1] = '\0';
+		safe_strcat(title, filenames[current_mesh].c_str());
+		safe_strcat(title, "* ");
+	}
+
+	// Then the other visible meshes
+	int nmeshes = meshes.size();
+	for (int i = 0; i < nmeshes; i++) {
+		if (i == current_mesh || !visible[i])
+			continue;
+		if (strlen(title) + strlen(filenames[i].c_str()) >
+		    sizeof(title) - 2)
+			break;
+		safe_strcat(title, filenames[i].c_str());
+		safe_strcat(title, " ");
+	}
+
+	// If nothing visible, just my name
+	if (title[0] == '\0')
+		safe_strcat(title, myname);
+
+	glutSetWindowTitle(title);
 }
 
 
@@ -333,6 +468,80 @@ void set_current(int i)
 	else
 		current_mesh = -1;
 	need_redraw();
+	update_title();
+}
+
+
+// Make all meshes visible
+void vis_all()
+{
+	for (size_t i = 0; i < meshes.size(); i++)
+		visible[i] = true;
+	update_bsph();
+	need_redraw();
+	update_title();
+}
+
+
+// Hide all meshes
+void vis_none()
+{
+	for (size_t i = 0; i < meshes.size(); i++)
+		visible[i] = false;
+	current_mesh = -1;
+	update_bsph();
+	need_redraw();
+	update_title();
+}
+
+
+// Make the "previous" or "next" mesh visible
+void vis_prev()
+{
+	// Find the first visible mesh
+	int first_vis = -1;
+	for (int i = meshes.size() - 1; i >= 0; i--) {
+		if (visible[i])
+			first_vis = i;
+	}
+	if (first_vis < 0)
+		first_vis = 0;
+
+	// Now find the previous one
+	int prev_vis = (first_vis + meshes.size() - 1) % meshes.size();
+
+	// Now make only that one visible
+	for (size_t i = 0; i < meshes.size(); i++)
+		visible[i] = (int(i) == prev_vis);
+
+	current_mesh = -1;
+	update_bsph();
+	need_redraw();
+	update_title();
+}
+
+void vis_next()
+{
+	// Find the last visible mesh
+	int last_vis = -1;
+	for (size_t i = 0; i < meshes.size(); i++) {
+		if (visible[i])
+			last_vis = i;
+	}
+	if (last_vis < 0)
+		last_vis = meshes.size() - 1;
+
+	// Now find the next one
+	int next_vis = (last_vis + 1) % meshes.size();
+
+	// Now make only that one visible
+	for (size_t i = 0; i < meshes.size(); i++)
+		visible[i] = (int(i) == next_vis);
+
+	current_mesh = -1;
+	update_bsph();
+	need_redraw();
+	update_title();
 }
 
 
@@ -345,6 +554,7 @@ void toggle_vis(int i)
 		set_current(-1);
 	update_bsph();
 	need_redraw();
+	update_title();
 }
 
 
@@ -357,7 +567,7 @@ void dump_image()
 	int imgnum = 0;
 	FILE *f;
 	while (1) {
-		char filename[1024];
+		char filename[BUFSIZ];
 		sprintf(filename, filenamepattern, imgnum++);
 		f = fopen(filename, "rb");
 		if (!f) {
@@ -439,44 +649,52 @@ void doubleclick(int button, int x, int y)
 {
 	// Render and read back ID reference image
 	camera.setupGL(global_xf * global_bsph.center, global_bsph.r);
-	glDisable(GL_BLEND);
-	glDisable(GL_LIGHTING);
-	glClearColor(1,1,1,1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	draw_index = true;
 	glPushMatrix();
 	glMultMatrixd(global_xf);
+
+	draw_index = true;
+	cls();
 	for (size_t i = 0; i < meshes.size(); i++) {
 		if (!visible[i])
 			continue;
-		glColor3ub((i >> 16) & 0xff,
-			   (i >> 8)  & 0xff,
-			    i        & 0xff);
 		draw_mesh(i);
 	}
-	glPopMatrix();
 	draw_index = false;
+
+	glPopMatrix();
+
 	GLint V[4];
 	glGetIntegerv(GL_VIEWPORT, V);
 	y = int(V[1] + V[3]) - 1 - y;
 	unsigned char pix[3];
 	glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pix);
-	int n = (pix[0] << 16) + (pix[1] << 8) + pix[2];
+
+	// Find closest color
+	Color pix_color(pix);
+	int clicked_mesh = -1;
+	float clicked_dist2 = dist2(pix_color, Color());
+	for (size_t i = 0; i < meshes.size(); i++) {
+		Color mesh_color = index_color(i);
+		float mesh_dist2 = dist2(pix_color, mesh_color);
+		if (mesh_dist2 < clicked_dist2) {
+			clicked_mesh = i;
+			clicked_dist2 = mesh_dist2;
+		}
+	}
 
 	if (button == 0 || buttonstate == (1 << 0)) {
 		// Double left click - select a mesh
-		set_current(n);
+		set_current(clicked_mesh);
 	} else if (button == 2 || buttonstate == (1 << 2)) {
 		// Double right click - ICP current to clicked-on
-		do_icp(n);
+		do_icp(clicked_mesh);
 	}
 }
 
 void mousehelperfunc(int x, int y)
 {
 	static const Mouse::button physical_to_logical_map[] = {
-		Mouse::NONE, Mouse::ROTATE, Mouse::MOVEXY, Mouse::MOVEZ,
+		Mouse::NONE,  Mouse::ROTATE, Mouse::MOVEXY, Mouse::MOVEZ,
 		Mouse::MOVEZ, Mouse::MOVEXY, Mouse::MOVEXY, Mouse::MOVEXY,
 	};
 
@@ -492,14 +710,14 @@ void mousehelperfunc(int x, int y)
 
 	if (current_mesh < 0) {
 		camera.mouse(x, y, b,
-			     global_xf * global_bsph.center, global_bsph.r,
-			     global_xf);
+		             global_xf * global_bsph.center, global_bsph.r,
+		             global_xf);
 	} else {
 		xform tmp_xf = global_xf * xforms[current_mesh];
 		camera.mouse(x, y, b,
-			     tmp_xf * meshes[current_mesh]->bsphere.center,
-			     meshes[current_mesh]->bsphere.r,
-			     tmp_xf);
+		             tmp_xf * meshes[current_mesh]->bsphere.center,
+		             meshes[current_mesh]->bsphere.r,
+		             tmp_xf);
 		xforms[current_mesh] = inv(global_xf) * tmp_xf;
 		update_bsph();
 	}
@@ -523,10 +741,21 @@ void mousebuttonfunc(int button, int state, int x, int y)
 	else
 		buttonstate &= ~(1 << 30);
 
+	if (button == 5 || button == 7) {
+		if (state == GLUT_DOWN)
+			vis_prev();
+		return;
+	} else if (button == 6 || button == 8) {
+		if (state == GLUT_DOWN)
+			vis_next();
+		return;
+	}
+
 	if (state == GLUT_DOWN) {
 		buttonstate |= (1 << button);
 		if (buttonstate == last_click_buttonstate &&
-		    now() - last_click_time < doubleclick_threshold) {
+		    now() - last_click_time < doubleclick_threshold &&
+		    button < 3) {
 			doubleclick(button, x, y);
 			last_click_buttonstate = 0;
 		} else {
@@ -542,26 +771,9 @@ void mousebuttonfunc(int button, int state, int x, int y)
 		need_redraw();
 	if ((buttonstate & 7) && (buttonstate & (1 << 30))) // Light
 		need_redraw();
-}
-
-
-// Idle callback
-void idle()
-{
-	xform tmp_xf = global_xf;
-	if (current_mesh >= 0)
-		tmp_xf = global_xf * xforms[current_mesh];
-
-	if (camera.autospin(tmp_xf))
+	if (autospin()) {
+		last_click_buttonstate = 0;
 		need_redraw();
-	else
-		usleep(10000);
-
-	if (current_mesh >= 0) {
-		xforms[current_mesh] = inv(global_xf) * tmp_xf;
-		update_bsph();
-	} else {
-		global_xf = tmp_xf;
 	}
 }
 
@@ -579,10 +791,14 @@ void keyboardfunc(unsigned char key, int, int)
 			break;
 		case '@': // Shift-2
 			draw_2side = !draw_2side; break;
+		case 'c':
+			draw_meshcolor = !draw_meshcolor; break;
 		case 'e':
 			draw_edges = !draw_edges; break;
 		case 'f':
 			draw_falsecolor = !draw_falsecolor; break;
+		case 'F':
+			draw_flat = !draw_flat; break;
 		case 'l':
 			draw_lit = !draw_lit; break;
 		case 'p':
@@ -604,31 +820,38 @@ void keyboardfunc(unsigned char key, int, int)
 		case Ctrl+'x':
 			save_xforms();
 			break;
-		case Ctrl+'c':
+		case Ctrl+'v':
 			save_cam_xform();
 			break;
 		case '\033': // Esc
+		case Ctrl+'c':
 		case Ctrl+'q':
 		case 'Q':
 		case 'q':
 			exit(0);
+		case Ctrl+'a':
+			vis_all(); break;
+		case Ctrl+'n':
+			vis_none(); break;
+		case ',':
+			vis_prev(); break;
+		case '.':
+			vis_next(); break;
+		case '1': case '2': case '3': case '4': case '5':
+		case '6': case '7': case '8': case '9':
+			toggle_vis(key - '1'); break;
 		case '0':
 			toggle_vis(9); break;
 		case '-':
 			toggle_vis(10); break;
 		case '=':
 			toggle_vis(11); break;
-		default:
-			if (key >= '1' && key <= '9') {
-				int m = key - '1';
-				toggle_vis(m);
-			}
 	}
 	need_redraw();
 }
 
 
-void usage(const char *myname)
+void usage()
 {
 	fprintf(stderr, "Usage: %s [-grab] infile...\n", myname);
 	exit(1);
@@ -636,12 +859,31 @@ void usage(const char *myname)
 
 int main(int argc, char *argv[])
 {
-	glutInitWindowSize(512, 512);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+	unsigned initDisplayMode = GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH;
+
+#ifdef USE_CORE_PROFILE
+# ifdef __APPLE__
+	initDisplayMode |= GLUT_3_2_CORE_PROFILE;
+# else
+	glutInitContextVersion(3, 2);
+	glutInitContextProfile(GLUT_CORE_PROFILE);
+# endif
+#endif
+	glutInitDisplayMode(initDisplayMode);
+
+	// We'd like to set this based on GLUT_SCREEN_{WIDTH|HEIGHT}
+	// but we can't do that until after glutInit().
+	// So, we set this to some value here...
+	glutInitWindowSize(1, 1);
 	glutInit(&argc, argv);
 
-	if (argc < 2)
-		usage(argv[0]);
+	// ... and if it hasn't been changed by command-line arguments
+	// we'll set it to what we really want
+	if (glutGet(GLUT_INIT_WINDOW_WIDTH) == 1) {
+		int window_size = min(glutGet(GLUT_SCREEN_WIDTH),
+			glutGet(GLUT_SCREEN_HEIGHT)) * 3 / 4;
+		glutInitWindowSize(window_size, window_size);
+	}
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-grab")) {
@@ -651,25 +893,40 @@ int main(int argc, char *argv[])
 		const char *filename = argv[i];
 		TriMesh *themesh = TriMesh::read(filename);
 		if (!themesh)
-			usage(argv[0]);
-		themesh->need_normals();
-		themesh->need_tstrips();
-		themesh->need_bsphere();
+			usage();
 		meshes.push_back(themesh);
 		xforms.push_back(xform());
-		visible.push_back(true);
+		visible.push_back(false);
 		filenames.push_back(filename);
 	}
+	if (meshes.empty())
+		usage();
 
-	glutCreateWindow(argv[1]);
+#pragma omp parallel for
+	for (size_t i = 0; i < meshes.size(); i++) {
+		meshes[i]->need_tstrips();
+		meshes[i]->clear_grid();
+		meshes[i]->clear_faces();
+		meshes[i]->clear_neighbors();
+		meshes[i]->clear_adjacentfaces();
+		meshes[i]->clear_across_edge();
+		reorder_verts(meshes[i]);
+		meshes[i]->need_normals(true);
+		meshes[i]->need_bsphere();
+		meshes[i]->convert_strips(TriMesh::TSTRIP_TERM);
+
+		// If any loaded mesh is big, enable Phong shading
+		if (meshes[i]->vertices.size() > 240)
+			draw_flat = false;
+	}
+
+	glutCreateWindow(myname);
 	glutDisplayFunc(redraw);
 	glutMouseFunc(mousebuttonfunc);
 	glutMotionFunc(mousemotionfunc);
 	glutKeyboardFunc(keyboardfunc);
-	glutIdleFunc(idle);
 
 	resetview();
+	update_title();
 	glutMainLoop();
 }
-
-

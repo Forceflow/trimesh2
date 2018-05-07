@@ -1,43 +1,61 @@
-CC = gcc
-CXX = g++
+#CC = gcc
+#CXX = g++
+#CC = clang
+#CXX = clang++
+#CXX = clang++ -stdlib=libc++
+CC = clang-omp
+CXX = clang-omp++
 AR = ar
 
 ARCHOPTS = -m32 -march=core2 -mfpmath=sse -mtune=native
-ARCHOPTS += -fopenmp
-COPTS = -Wall -Wextra -Wno-parentheses -Wno-unused -Wno-unknown-pragmas
+COPTS = -fno-strict-overflow -fno-math-errno -fno-trapping-math
+COPTS += -Wall -Wextra -Wshadow
+DEFINES = -U_FORTIFY_SOURCE
 
 ifdef DEBUG
-	COPTS += -ggdb3
+	COPTS += -O1 -ggdb3 -fno-omit-frame-pointer
+	DEFINES += -DDEBUG
 else
-	COPTS += -O2 -funroll-loops -fomit-frame-pointer
-	COPTS += -fno-math-errno -funsafe-math-optimizations
-	# LDOPTS = -s  # Seems to be deprecated on Mac these days
+	COPTS += -O3 -fomit-frame-pointer
+	DEFINES += -DNDEBUG
+endif
+
+ifeq (,$(shell $(CXX) --version | grep clang))
+	OPENMPOPTS = -fopenmp
+endif
+ifeq (clang-omp++, $(CXX))
+	OPENMPOPTS = -fopenmp
 endif
 
 CXXOPTS = $(COPTS)
-CFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(COPTS)
-CXXFLAGS = $(ARCHOPTS) $(INCLUDES) $(DEFINES) $(CXXOPTS) -DDARWIN
-LDFLAGS = $(LIBDIR) $(LDOPTS) -multiply_defined suppress
+CFLAGS = $(ARCHOPTS) $(OPENMPOPTS) $(INCLUDES) $(DEFINES) $(COPTS)
+CXXFLAGS = $(ARCHOPTS) $(OPENMPOPTS) $(INCLUDES) $(DEFINES) $(CXXOPTS)
+LDFLAGS = $(LIBDIR) $(LDOPTS)
 
+
+LIBS = -lm
 DONT_BUILD_FREEGLUT = y
-
-LIBS = -lm -lobjc
-GLLIBS = -framework GLUT -framework OpenGL -lgluit
-CHOLMODLIBS = -lcholmod -lamd -lcolamd -lccolamd -lcamd -lmetis -framework Accelerate
+GLLIBS = -lgluit -framework GLUT -framework OpenGL
 
 
 $(OBJDIR)/%.o: %.c
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CC) $(CFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(OBJDIR)/%.o: %.cc
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
 	@ echo "Compiling $<"
-	@ rm -f "$(@:.o=.d)" && env DEPENDENCIES_OUTPUT="$(@:.o=.d) $@" $(CXX) $(CXXFLAGS) -c $< -o $@
+	@ rm -f $@
+	@ $(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
+ifneq (,$(findstring -L,$(LIBDIR)))
+VPATH = $(subst -L,,$(LIBDIR))
+endif
 
 define LINK
 	@ echo "Linking $@"
@@ -50,13 +68,6 @@ define STATICLIB
 	@ rm -f $@
 	@ $(AR) -rcs $@ $^
 endef
-
-define SHAREDLIB
-	@ echo "Creating library $@"
-	@ rm -f $@
-	@ $(CXX) $(CXXFLAGS) -shared $^ -o $@
-endef
-
 
 -include $(OBJDIR)/*.d
 

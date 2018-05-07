@@ -25,16 +25,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
-
-#if TARGET_HOST_UNIX_X11
-  #include <X11/cursorfont.h>
-#endif
 
 /*
  * TODO BEFORE THE STABLE RELEASE:
@@ -45,35 +37,249 @@
  * apart from the windowing system version.
  */
 
-/* -- INTERNAL FUNCTIONS --------------------------------------------------- */
+/* -- PRIVATE FUNCTIONS --------------------------------------------------- */
 
-#if TARGET_HOST_UNIX_X11
+#if TARGET_HOST_POSIX_X11 || TARGET_HOST_MAC_OSX || TARGET_HOST_SOLARIS
+  #include <X11/cursorfont.h>
 
-int fgGetCursorError( Cursor cursor )
+/*
+ * A factory method for an empty cursor
+ */
+static Cursor getEmptyCursor( void )
 {
-    int ret = 0;
-    char buf[ 256 ];
-
-    switch( cursor )
-    {
-    case BadAlloc:
-    case BadFont:
-    case BadMatch:
-    case BadPixmap:
-    case BadValue:
-        XGetErrorText( fgDisplay.Display, cursor, buf, sizeof buf );
-        fgWarning( "Error in setting cursor:\n %s.", buf );
-        ret = cursor;
-        break;
-    default:
-        /* no error */
-        break;
+    static Cursor cursorNone = None;
+    if( cursorNone == None ) {
+        char cursorNoneBits[ 32 ];
+        XColor dontCare;
+        Pixmap cursorNonePixmap;
+        memset( cursorNoneBits, 0, sizeof( cursorNoneBits ) );
+        memset( &dontCare, 0, sizeof( dontCare ) );
+        cursorNonePixmap = XCreateBitmapFromData ( fgDisplay.Display,
+                                                   fgDisplay.RootWindow,
+                                                   cursorNoneBits, 16, 16 );
+        if( cursorNonePixmap != None ) {
+            cursorNone = XCreatePixmapCursor( fgDisplay.Display,
+                                              cursorNonePixmap, cursorNonePixmap,
+                                              &dontCare, &dontCare, 0, 0 );
+            XFreePixmap( fgDisplay.Display, cursorNonePixmap );
+        }
     }
-
-    return ret;
+    return cursorNone;
 }
 
+typedef struct tag_cursorCacheEntry cursorCacheEntry;
+struct tag_cursorCacheEntry {
+    unsigned int cursorShape;    /* an XC_foo value */
+    Cursor cachedCursor;         /* None if the corresponding cursor has
+                                    not been created yet */
+};
+
+/*
+ * Note: The arrangement of the table below depends on the fact that
+ * the "normal" GLUT_CURSOR_* values start a 0 and are consecutive.
+ */ 
+static cursorCacheEntry cursorCache[] = {
+    { XC_arrow,               None }, /* GLUT_CURSOR_RIGHT_ARROW */
+    { XC_top_left_arrow,      None }, /* GLUT_CURSOR_LEFT_ARROW */
+    { XC_hand1,               None }, /* GLUT_CURSOR_INFO */
+    { XC_pirate,              None }, /* GLUT_CURSOR_DESTROY */
+    { XC_question_arrow,      None }, /* GLUT_CURSOR_HELP */
+    { XC_exchange,            None }, /* GLUT_CURSOR_CYCLE */
+    { XC_spraycan,            None }, /* GLUT_CURSOR_SPRAY */
+    { XC_watch,               None }, /* GLUT_CURSOR_WAIT */
+    { XC_xterm,               None }, /* GLUT_CURSOR_TEXT */
+    { XC_crosshair,           None }, /* GLUT_CURSOR_CROSSHAIR */
+    { XC_sb_v_double_arrow,   None }, /* GLUT_CURSOR_UP_DOWN */
+    { XC_sb_h_double_arrow,   None }, /* GLUT_CURSOR_LEFT_RIGHT */
+    { XC_top_side,            None }, /* GLUT_CURSOR_TOP_SIDE */
+    { XC_bottom_side,         None }, /* GLUT_CURSOR_BOTTOM_SIDE */
+    { XC_left_side,           None }, /* GLUT_CURSOR_LEFT_SIDE */
+    { XC_right_side,          None }, /* GLUT_CURSOR_RIGHT_SIDE */
+    { XC_top_left_corner,     None }, /* GLUT_CURSOR_TOP_LEFT_CORNER */
+    { XC_top_right_corner,    None }, /* GLUT_CURSOR_TOP_RIGHT_CORNER */
+    { XC_bottom_right_corner, None }, /* GLUT_CURSOR_BOTTOM_RIGHT_CORNER */
+    { XC_bottom_left_corner,  None }  /* GLUT_CURSOR_BOTTOM_LEFT_CORNER */
+};
+
+static void fghSetCursor ( SFG_Window *window, int cursorID )
+{
+    Cursor cursor;
+    /*
+     * XXX FULL_CROSSHAIR demotes to plain CROSSHAIR. Old GLUT allows
+     * for this, but if there is a system that easily supports a full-
+     * window (or full-screen) crosshair, we might consider it.
+     */
+    int cursorIDToUse =
+        ( cursorID == GLUT_CURSOR_FULL_CROSSHAIR ) ? GLUT_CURSOR_CROSSHAIR : cursorID;
+
+    if( ( cursorIDToUse >= 0 ) &&
+        ( cursorIDToUse < (int) (sizeof( cursorCache ) / sizeof( cursorCache[0] ) ) ) ) {
+        cursorCacheEntry *entry = &cursorCache[ cursorIDToUse ];
+        if( entry->cachedCursor == None ) {
+            entry->cachedCursor =
+                XCreateFontCursor( fgDisplay.Display, entry->cursorShape );
+        }
+        cursor = entry->cachedCursor;
+    } else {
+        switch( cursorIDToUse )
+        {
+        case GLUT_CURSOR_NONE:
+            cursor = getEmptyCursor( );
+            break;
+
+        case GLUT_CURSOR_INHERIT:
+            cursor = None;
+            break;
+
+        default:
+            fgError( "Unknown cursor type: %d", cursorIDToUse );
+            return;
+        }
+    }
+
+    if ( cursorIDToUse == GLUT_CURSOR_INHERIT ) {
+        XUndefineCursor( fgDisplay.Display, window->Window.Handle );
+    } else if ( cursor != None ) {
+        XDefineCursor( fgDisplay.Display, window->Window.Handle, cursor );
+    } else if ( cursorIDToUse != GLUT_CURSOR_NONE ) {
+        fgError( "Failed to create cursor" );
+    }
+}
+
+
+static void fghWarpPointer ( int x, int y )
+{
+    XWarpPointer(
+        fgDisplay.Display,
+        None,
+        fgStructure.CurrentWindow->Window.Handle,
+        0, 0, 0, 0,
+        x, y
+    );
+    /* Make the warp visible immediately. */
+    XFlush( fgDisplay.Display );
+}
+
+void fghGetCursorPos(SFG_XYUse *mouse_pos)
+{
+    /* Get current pointer location in screen coordinates
+    */
+    Window junk_window;
+    unsigned int junk_mask;
+    int junk_pos;
+    
+    XQueryPointer(fgDisplay.Display, fgDisplay.RootWindow,
+            &junk_window, &junk_window,
+            &mouse_pos->X, &mouse_pos->Y,
+            &junk_pos, &junk_pos, &junk_mask);
+    
+    mouse_pos->Use = GL_TRUE;
+}
 #endif
+
+
+#if TARGET_HOST_MS_WINDOWS
+static void fghSetCursor ( SFG_Window *window, int cursorID )
+{
+    /*
+     * Joe Krahn is re-writing the following code.
+     */
+    /* Set the cursor AND change it for this window class. */
+#if !defined(__MINGW64__) && _MSC_VER <= 1200
+#       define MAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( LoadCursor( NULL, b ) );                  \
+            SetClassLong( window->Window.Handle,                 \
+                          GCL_HCURSOR,                           \
+                          ( LONG )LoadCursor( NULL, b ) );       \
+        break;
+    /* Nuke the cursor AND change it for this window class. */
+#       define ZAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( NULL );                                   \
+            SetClassLong( window->Window.Handle,                 \
+                          GCL_HCURSOR, ( LONG )NULL );           \
+        break;
+#else
+#       define MAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( LoadCursor( NULL, b ) );                  \
+            SetClassLongPtr( window->Window.Handle,              \
+                          GCLP_HCURSOR,                          \
+                          ( LONG )( LONG_PTR )LoadCursor( NULL, b ) );       \
+        break;
+    /* Nuke the cursor AND change it for this window class. */
+#       define ZAP_CURSOR(a,b)                                   \
+        case a:                                                  \
+            SetCursor( NULL );                                   \
+            SetClassLongPtr( window->Window.Handle,              \
+                          GCLP_HCURSOR, ( LONG )( LONG_PTR )NULL );          \
+        break;
+#endif
+
+    switch( cursorID )
+    {
+        MAP_CURSOR( GLUT_CURSOR_RIGHT_ARROW,         IDC_ARROW     );
+        MAP_CURSOR( GLUT_CURSOR_LEFT_ARROW,          IDC_ARROW     );
+        MAP_CURSOR( GLUT_CURSOR_INFO,                IDC_HELP      );
+        MAP_CURSOR( GLUT_CURSOR_DESTROY,             IDC_CROSS     );
+        MAP_CURSOR( GLUT_CURSOR_HELP,                IDC_HELP      );
+        MAP_CURSOR( GLUT_CURSOR_CYCLE,               IDC_SIZEALL   );
+        MAP_CURSOR( GLUT_CURSOR_SPRAY,               IDC_CROSS     );
+        MAP_CURSOR( GLUT_CURSOR_WAIT,                IDC_WAIT      );
+        MAP_CURSOR( GLUT_CURSOR_TEXT,                IDC_IBEAM     );
+        MAP_CURSOR( GLUT_CURSOR_CROSSHAIR,           IDC_CROSS     );
+        MAP_CURSOR( GLUT_CURSOR_UP_DOWN,             IDC_SIZENS    );
+        MAP_CURSOR( GLUT_CURSOR_LEFT_RIGHT,          IDC_SIZEWE    );
+        MAP_CURSOR( GLUT_CURSOR_TOP_SIDE,            IDC_ARROW     ); /* XXX ToDo */
+        MAP_CURSOR( GLUT_CURSOR_BOTTOM_SIDE,         IDC_ARROW     ); /* XXX ToDo */
+        MAP_CURSOR( GLUT_CURSOR_LEFT_SIDE,           IDC_ARROW     ); /* XXX ToDo */
+        MAP_CURSOR( GLUT_CURSOR_RIGHT_SIDE,          IDC_ARROW     ); /* XXX ToDo */
+        MAP_CURSOR( GLUT_CURSOR_TOP_LEFT_CORNER,     IDC_SIZENWSE  );
+        MAP_CURSOR( GLUT_CURSOR_TOP_RIGHT_CORNER,    IDC_SIZENESW  );
+        MAP_CURSOR( GLUT_CURSOR_BOTTOM_RIGHT_CORNER, IDC_SIZENWSE  );
+        MAP_CURSOR( GLUT_CURSOR_BOTTOM_LEFT_CORNER,  IDC_SIZENESW  );
+        MAP_CURSOR( GLUT_CURSOR_INHERIT,             IDC_ARROW     ); /* XXX ToDo */
+        ZAP_CURSOR( GLUT_CURSOR_NONE,                NULL          );
+        MAP_CURSOR( GLUT_CURSOR_FULL_CROSSHAIR,      IDC_CROSS     ); /* XXX ToDo */
+
+    default:
+        fgError( "Unknown cursor type: %d", cursorID );
+        break;
+    }
+}
+
+
+static void fghWarpPointer ( int x, int y )
+{
+    POINT coords;
+    coords.x = x;
+    coords.y = y;
+
+    /* ClientToScreen() translates {coords} for us. */
+    ClientToScreen( fgStructure.CurrentWindow->Window.Handle, &coords );
+    SetCursorPos( coords.x, coords.y );
+}
+
+void fghGetCursorPos(SFG_XYUse *mouse_pos)
+{
+    /* Get current pointer location in screen coordinates
+     */
+    POINT pos;
+    GetCursorPos(&pos);
+
+    mouse_pos->X = pos.x;
+    mouse_pos->Y = pos.y;
+    mouse_pos->Use = GL_TRUE;
+}
+#endif
+
+
+/* -- INTERNAL FUNCTIONS ---------------------------------------------------- */
+void fgSetCursor ( SFG_Window *window, int cursorID )
+{
+    fghSetCursor ( window, cursorID );
+}
 
 
 /* -- INTERFACE FUNCTIONS -------------------------------------------------- */
@@ -83,169 +289,11 @@ int fgGetCursorError( Cursor cursor )
  */
 void FGAPIENTRY glutSetCursor( int cursorID )
 {
-    freeglut_assert_ready;  /* XXX WHY do we need the timer active for this? */
-    freeglut_assert_window;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSetCursor" );
+    FREEGLUT_EXIT_IF_NO_WINDOW ( "glutSetCursor" );
 
-#if TARGET_HOST_UNIX_X11
-    /*
-     * Open issues:
-     * (a) Partial error checking.  Is that a problem?
-     *     Is fgGetCursorError() correct?  Should we abort on errors?
-     *     Should there be a freeglut-wide X error handler?  Should
-     *     we use the X error-handler mechanism?
-     * (b) FULL_CROSSHAIR demotes to plain CROSSHAIR.  Old GLUT allows
-     *     for this, but if there is a system that easily supports a full-
-     *     window (or full-screen) crosshair, we might consider it.
-     * (c) Out-of-range cursor-types generate warnings.  Should we abort?
-     */
-    {
-        Cursor cursor = None;
-        Pixmap no_cursor = None ;  /* Used for GLUT_CURSOR_NONE */
-        int error = 0;
-
-#define MAP_CURSOR(a,b)                                     \
-    case a:                                                 \
-        cursor = XCreateFontCursor( fgDisplay.Display, b ); \
-        break;
-
-        if( GLUT_CURSOR_FULL_CROSSHAIR == cursorID )
-            cursorID = GLUT_CURSOR_CROSSHAIR;
-
-        switch( cursorID )
-        {
-            MAP_CURSOR( GLUT_CURSOR_RIGHT_ARROW, XC_right_ptr);
-            MAP_CURSOR( GLUT_CURSOR_LEFT_ARROW,  XC_left_ptr);
-            MAP_CURSOR( GLUT_CURSOR_INFO,        XC_hand1);
-            MAP_CURSOR( GLUT_CURSOR_DESTROY,     XC_pirate);
-            MAP_CURSOR( GLUT_CURSOR_HELP,        XC_question_arrow);
-            MAP_CURSOR( GLUT_CURSOR_CYCLE,       XC_exchange);
-            MAP_CURSOR( GLUT_CURSOR_SPRAY,       XC_spraycan);
-            MAP_CURSOR( GLUT_CURSOR_WAIT,        XC_watch);
-            MAP_CURSOR( GLUT_CURSOR_TEXT,        XC_xterm);
-            MAP_CURSOR( GLUT_CURSOR_CROSSHAIR,   XC_crosshair);
-            MAP_CURSOR( GLUT_CURSOR_UP_DOWN,     XC_sb_v_double_arrow);
-            MAP_CURSOR( GLUT_CURSOR_LEFT_RIGHT,  XC_sb_h_double_arrow);
-            MAP_CURSOR( GLUT_CURSOR_TOP_SIDE,    XC_top_side);
-            MAP_CURSOR( GLUT_CURSOR_BOTTOM_SIDE, XC_bottom_side);
-            MAP_CURSOR( GLUT_CURSOR_LEFT_SIDE,   XC_left_side);
-            MAP_CURSOR( GLUT_CURSOR_RIGHT_SIDE,  XC_right_side);
-            MAP_CURSOR( GLUT_CURSOR_TOP_LEFT_CORNER,     XC_top_left_corner);
-            MAP_CURSOR( GLUT_CURSOR_TOP_RIGHT_CORNER,    XC_top_right_corner);
-            MAP_CURSOR( GLUT_CURSOR_BOTTOM_RIGHT_CORNER,
-                        XC_bottom_right_corner);
-            MAP_CURSOR( GLUT_CURSOR_BOTTOM_LEFT_CORNER, XC_bottom_left_corner);
-            /* MAP_CURSOR( GLUT_CURSOR_NONE,        XC_bogosity); */
-
-        case GLUT_CURSOR_NONE:
-        {
-            /*
-             * Note that we *never* change {no_cursor_bits} from anything
-             * but all-zeros.  It is our image and mask.  We also apparently
-             * need to pick a color for foreground/background---but what
-             * one we pick doesn't matter for GLUT_CURSOR_NONE.
-             */
-            static char no_cursor_bits[ 32 ];
-            XColor black;
-            no_cursor = XCreatePixmapFromBitmapData( fgDisplay.Display,
-                                                     fgDisplay.RootWindow,
-                                                     no_cursor_bits,
-                                                     16, 16,
-                                                     1, 0, 1 );
-            XParseColor( fgDisplay.Display,
-                         DefaultColormap( fgDisplay.Display,
-                                          DefaultScreen( fgDisplay.Display ) ),
-                         "black",
-                         &black );
-            cursor = XCreatePixmapCursor( fgDisplay.Display,
-                                          no_cursor, no_cursor,
-                                          &black, &black,
-                                          0, 0 );
-            break;
-        }
-
-        case GLUT_CURSOR_INHERIT:
-            break;
-
-        default:
-            fgWarning( "Unknown cursor type: %d\n", cursorID );
-            return;
-        }
-
-        error = fgGetCursorError( cursor );
-
-        if( GLUT_CURSOR_INHERIT == cursorID )
-            XUndefineCursor( fgDisplay.Display,
-                             fgStructure.Window->Window.Handle );
-        else
-        {
-            XDefineCursor( fgDisplay.Display,
-                           fgStructure.Window->Window.Handle, cursor );
-            XFreeCursor( fgDisplay.Display, cursor );
-            if( GLUT_CURSOR_NONE == cursorID )
-                XFreePixmap( fgDisplay.Display, no_cursor );
-        }
-    }
-
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
-
-/* Note from Jeroen Baert: Imported this from latest Freeglut release to fix 64-bit compilation
-Current TriMesh library contains cherry-picked old FreeGlut source.
-Switching to full Freeglut 3.x would need serious refactoring. */
-
-// Note from Freeglut 3.0.0 : Joe Krahn is re-writing the following code.
-#if !defined(__MINGW64__) && _MSC_VER <= 1200
-#       define MAP_CURSOR(a,b)                                   \
-        case a:                                                  \
-            SetCursor( LoadCursor( NULL, b ) );                  \
-            SetClassLong( fgStructure.Window->Window.Handle,                 \
-                          GCL_HCURSOR,                           \
-                          ( LONG )LoadCursor( NULL, b ) );       \
-        break;
-/* Nuke the cursor AND change it for this window class. */
-#       define ZAP_CURSOR(a,b)                                   \
-        case a:                                                  \
-            SetCursor( NULL );                                   \
-            SetClassLong( fgStructure.Window->Window.Handle,                 \
-                          GCL_HCURSOR, ( LONG )NULL );           \
-        break;
-#else
-#       define MAP_CURSOR(a,b)                                   \
-        case a:                                                  \
-            SetCursor( LoadCursor( NULL, b ) );                  \
-            SetClassLongPtr( fgStructure.Window->Window.Handle,              \
-                          GCLP_HCURSOR,                          \
-                          ( LONG )( LONG_PTR )LoadCursor( NULL, b ) );       \
-        break;
-/* Nuke the cursor AND change it for this window class. */
-#       define ZAP_CURSOR(a,b)                                   \
-        case a:                                                  \
-            SetCursor( NULL );                                   \
-            SetClassLongPtr( fgStructure.Window->Window.Handle,              \
-                          GCLP_HCURSOR, ( LONG )( LONG_PTR )NULL );          \
-        break;
-#endif
-
-    switch( cursorID )
-    {
-        MAP_CURSOR( GLUT_CURSOR_RIGHT_ARROW, IDC_ARROW     );
-        MAP_CURSOR( GLUT_CURSOR_LEFT_ARROW,  IDC_ARROW     );
-        MAP_CURSOR( GLUT_CURSOR_INFO,        IDC_HELP      );
-        MAP_CURSOR( GLUT_CURSOR_DESTROY,     IDC_CROSS     );
-        MAP_CURSOR( GLUT_CURSOR_HELP,        IDC_HELP      );
-        MAP_CURSOR( GLUT_CURSOR_CYCLE,       IDC_SIZEALL   );
-        MAP_CURSOR( GLUT_CURSOR_SPRAY,       IDC_CROSS     );
-        MAP_CURSOR( GLUT_CURSOR_WAIT,        IDC_WAIT      );
-        MAP_CURSOR( GLUT_CURSOR_TEXT,        IDC_UPARROW   );
-        MAP_CURSOR( GLUT_CURSOR_CROSSHAIR,   IDC_CROSS     );
-        /* MAP_CURSOR( GLUT_CURSOR_NONE,        IDC_NO        ); */
-        ZAP_CURSOR( GLUT_CURSOR_NONE,        NULL           );
-
-    default:
-        MAP_CURSOR( GLUT_CURSOR_UP_DOWN,     IDC_ARROW     );
-    }
-#endif
-
-    fgStructure.Window->State.Cursor = cursorID;
+    fghSetCursor ( fgStructure.CurrentWindow, cursorID );
+    fgStructure.CurrentWindow->State.Cursor = cursorID;
 }
 
 /*
@@ -253,35 +301,10 @@ Switching to full Freeglut 3.x would need serious refactoring. */
  */
 void FGAPIENTRY glutWarpPointer( int x, int y )
 {
-    freeglut_assert_ready; /* XXX WHY do we need the timer active for this? */
-    freeglut_assert_window;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutWarpPointer" );
+    FREEGLUT_EXIT_IF_NO_WINDOW ( "glutWarpPointer" );
 
-#if TARGET_HOST_UNIX_X11
-
-    XWarpPointer(
-        fgDisplay.Display,
-        None,
-        fgStructure.Window->Window.Handle,
-        0, 0, 0, 0,
-        x, y
-    );
-    XFlush( fgDisplay.Display ); /* XXX Is this really necessary? */
-
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
-
-    {
-        POINT coords;
-        coords.x = x;
-        coords.y = y;
-
-        /*
-         * ClientToScreen() translates {coords} for us.
-         */
-        ClientToScreen( fgStructure.Window->Window.Handle, &coords );
-        SetCursorPos( coords.x, coords.y );
-    }
-
-#endif
+    fghWarpPointer ( x, y );
 }
 
 /*** END OF FILE ***/

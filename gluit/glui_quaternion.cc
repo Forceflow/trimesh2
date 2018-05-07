@@ -161,12 +161,12 @@ quat quat_slerp( quat from, quat to, float t )
     /* standard case (slerp) */
     omega = acos( cosom );
     sinom = sin( omega );
-    scale0 = sin((1.0 - t) * omega) / sinom;
-    scale1 = sin(t * omega) / sinom;
+    scale0 = sin((1.0 - (double)t) * omega) / sinom;
+    scale1 = sin((double)t * omega) / sinom;
   }
   else {
     /* 'from' and 'to' are very close - just do linear interpolation */
-    scale0 = 1.0 - t;
+    scale0 = 1.0 - (double)t;
     scale1 = t;      
   }
 
@@ -209,11 +209,11 @@ float quat::get_angle( void )
 
 vec3  quat::get_axis( void )
 {
-  float scale = (float) sin( acos( (double) s ) );
+  double scale = sin( acos( (double) s ) );
   if ( scale < FUDGE AND scale > -FUDGE )
     return vec3( 0.0, 0.0, 0.0 );
   else
-    return  v / scale;
+    return  v / (float) scale;
 }
 
 

@@ -25,13 +25,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <GL/freeglut.h>
 #include "freeglut_internal.h"
-
 
 /* -- INTERFACE FUNCTIONS -------------------------------------------------- */
 
@@ -40,9 +35,14 @@
  */
 void FGAPIENTRY glutPostRedisplay( void )
 {
-    freeglut_assert_ready;
-    freeglut_assert_window;
-    fgStructure.Window->State.Redisplay = GL_TRUE;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutPostRedisplay" );
+    if ( ! fgStructure.CurrentWindow )
+	{
+      fgError ( " ERROR:  Function <%s> called"
+                " with no current window defined.", "glutPostRedisplay" ) ;
+	}
+
+    fgStructure.CurrentWindow->State.Redisplay = GL_TRUE;
 }
 
 /*
@@ -50,17 +50,21 @@ void FGAPIENTRY glutPostRedisplay( void )
  */
 void FGAPIENTRY glutSwapBuffers( void )
 {
-    freeglut_assert_ready;
-    freeglut_assert_window;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSwapBuffers" );
+    FREEGLUT_EXIT_IF_NO_WINDOW ( "glutSwapBuffers" );
 
+    /*
+     * "glXSwapBuffers" already performs an implicit call to "glFlush". What
+     * about "SwapBuffers"?
+     */
     glFlush( );
-    if( ! fgStructure.Window->Window.DoubleBuffered )
+    if( ! fgStructure.CurrentWindow->Window.DoubleBuffered )
         return;
 
-#if TARGET_HOST_UNIX_X11
-    glXSwapBuffers( fgDisplay.Display, fgStructure.Window->Window.Handle );
-#elif TARGET_HOST_WIN32 || TARGET_HOST_WINCE
-    SwapBuffers( fgStructure.Window->Window.Device );
+#if TARGET_HOST_POSIX_X11
+    glXSwapBuffers( fgDisplay.Display, fgStructure.CurrentWindow->Window.Handle );
+#elif TARGET_HOST_MS_WINDOWS
+    SwapBuffers( fgStructure.CurrentWindow->Window.Device );
 #endif
 
     /* GLUT_FPS env var support */
@@ -90,7 +94,7 @@ void FGAPIENTRY glutPostWindowRedisplay( int windowID )
 {
     SFG_Window* window;
 
-    freeglut_assert_ready;
+    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutPostWindowRedisplay" );
     window = fgWindowByID( windowID );
     freeglut_return_if_fail( window );
     window->State.Redisplay = GL_TRUE;

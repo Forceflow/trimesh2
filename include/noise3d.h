@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NOISE3D_H
+#define NOISE3D_H
 /*
 Szymon Rusinkiewicz
 Princeton University
@@ -7,12 +8,9 @@ noise3d.h
 A class for 3-D noise functions, including white noise and 1/f noise
 */
 
-#ifndef _USE_MATH_DEFINES
- #define _USE_MATH_DEFINES
-#endif
-#include <cmath>
-#include <algorithm>
+#include "mathutil.h"
 #include <vector>
+
 
 namespace trimesh {
 
@@ -22,19 +20,10 @@ public:
 	::std::vector<float> r;
 	::std::vector<int> p;
 
-	// Quick 'n dirty portable random number generator 
-	float tinyrnd() const
-	{
-		static unsigned trand = 0;
-		trand = 1664525u * trand + 1013904223u;
-		return (float) trand / 4294967296.0f;
-	}
-
 	int coord2index(int x, int y, int z) const
 	{
 		return p[ p[x] + y ] + z;
 	}
-
 
 	Noise3D(int _xsize, int _ysize, int _zsize) :
 		xsize(_xsize), ysize(_ysize), zsize(_zsize)
@@ -49,13 +38,13 @@ public:
 		for (int i = 0; i < pxy; i++)
 			p.push_back(i);
 		for (int i = 0; i < pxy; i++) {
-			int j = int(tinyrnd()*pxy);
+			int j = uniform_rnd(pxy);
 			swap(p[i], p[j]);
 		}
 		for (int i = pxy; i < pxy+ysize; i++)
 			p.push_back(p[i-pxy]);
 		for (int i = 0; i < pxy + zsize; i++)
-			r.push_back(tinyrnd());
+			r.push_back(uniform_rnd());
 	}
 
 	virtual float lookup(float x, float y, float z) const
@@ -77,13 +66,13 @@ public:
 		float zf = z*zsize - Z,  zf1 = 1.0f - zf;
 
 		return xf1*(yf1*(zf1*r[coord2index(X , Y , Z )] +
-				 zf *r[coord2index(X , Y , Z1)]) +
-			    yf *(zf1*r[coord2index(X , Y1, Z )] +
-				 zf *r[coord2index(X , Y1, Z1)])) +
+		                 zf *r[coord2index(X , Y , Z1)]) +
+		            yf *(zf1*r[coord2index(X , Y1, Z )] +
+		                 zf *r[coord2index(X , Y1, Z1)])) +
 		       xf *(yf1*(zf1*r[coord2index(X1, Y , Z )] +
-				 zf *r[coord2index(X1, Y , Z1)]) +
-			    yf *(zf1*r[coord2index(X1, Y1, Z )] +
-				 zf *r[coord2index(X1, Y1, Z1)]));
+		                 zf *r[coord2index(X1, Y , Z1)]) +
+		            yf *(zf1*r[coord2index(X1, Y1, Z )] +
+		                 zf *r[coord2index(X1, Y1, Z1)]));
 	}
 
 	virtual ~Noise3D() {}
@@ -114,8 +103,8 @@ public:
 		float t = 0;
 		float factor = 1.0;
 		for (int pass = 0 ; pass < passes; pass++, factor *= MAGIC_SCALE) {
-			float r = 1.0f / factor;
-			t += Noise3D::lookup(x*r,y*r,z*r) * factor;
+			float s = 1.0f / factor;
+			t += Noise3D::lookup(s * x, s * y, s * z) * factor;
 		}
 
 		return t * correction;
@@ -124,4 +113,6 @@ public:
 
 #undef MAGIC_SCALE
 
-}; // namespace trimesh
+} // namespace trimesh
+
+#endif

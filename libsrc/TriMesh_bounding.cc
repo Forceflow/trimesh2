@@ -48,7 +48,7 @@ void TriMesh::need_bsphere()
 	mb.build();
 	bsphere.center = mb.center();
 	bsphere.r = sqrt(mb.squared_radius());
-	bsphere.valid = true; 
+	bsphere.valid = true;
 
 	dprintf("Done.\n  center = (%g, %g, %g), radius = %g\n",
 		bsphere.center[0], bsphere.center[1],
@@ -118,7 +118,7 @@ void TriMesh::need_bsphere()
 		bsphere.center += vertices[i];
 	}
 
-	bsphere.valid = true; 
+	bsphere.valid = true;
 	dprintf("Done.\n  center = (%g, %g, %g), radius = %g\n",
 		bsphere.center[0], bsphere.center[1],
 		bsphere.center[2], bsphere.r);
@@ -126,4 +126,4 @@ void TriMesh::need_bsphere()
 
 #endif
 
-}; // namespace trimesh
+} // namespace trimesh

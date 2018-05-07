@@ -18,6 +18,87 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\gluit\freeglut_callbacks.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_cursor.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_display.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_ext.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_font.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_font_data.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_gamemode.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_geometry.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_glutfont_definitions.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_init.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_input_devices.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_joystick.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_main.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_menu.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_misc.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_overlay.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_spaceball.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_state.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_stroke_mono_roman.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_stroke_roman.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_structure.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_teapot.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_videoresize.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_window.c" />
+    <ClCompile Include="..\..\..\gluit\freeglut_xinput.c" />
+    <ClCompile Include="..\..\..\gluit\glui.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_add_controls.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_algebra3.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_arcball.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_bitmaps.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_bitmap_img_data.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_button.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_checkbox.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_column.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_control.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_edittext.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_0.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_0_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_1.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_1_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_downarrow.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_leftarrow.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_listbox_down.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_listbox_up.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_listbox_up_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_0.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_0_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_1.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_1_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_rightarrow.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spindown_0.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spindown_1.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spindown_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spinup_0.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spinup_1.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_spinup_dis.c" />
+    <ClCompile Include="..\..\..\gluit\glui_img_uparrow.c" />
+    <ClCompile Include="..\..\..\gluit\glui_listbox.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_mouse_iaction.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_node.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_panel.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_quaternion.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_radio.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_rollout.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_rotation.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_separator.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_slider.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_spinner.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_statictext.cc" />
+    <ClCompile Include="..\..\..\gluit\glui_translation.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\gluit\freeglut_config.h" />
+    <ClInclude Include="..\..\..\gluit\freeglut_internal.h" />
+    <ClInclude Include="..\..\..\gluit\freeglut_teapot_data.h" />
+    <ClInclude Include="..\..\..\gluit\glui_algebra3.h" />
+    <ClInclude Include="..\..\..\gluit\glui_arcball.h" />
+    <ClInclude Include="..\..\..\gluit\glui_quaternion.h" />
+    <ClInclude Include="..\..\..\gluit\glui_stdinc.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0DA8CF97-A6FC-4BCC-9B1E-E0FF7E552353}</ProjectGuid>
     <RootNamespace>gluit</RootNamespace>
@@ -140,83 +221,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\gluit\freeglut_callbacks.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_cursor.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_display.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_ext.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_font.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_font_data.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_gamemode.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_geometry.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_glutfont_definitions.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_init.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_joystick.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_main.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_menu.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_misc.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_overlay.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_state.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_stroke_mono_roman.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_stroke_roman.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_structure.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_teapot.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_videoresize.c" />
-    <ClCompile Include="..\..\..\gluit\freeglut_window.c" />
-    <ClCompile Include="..\..\..\gluit\glui.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_add_controls.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_algebra3.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_arcball.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_bitmaps.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_bitmap_img_data.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_button.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_checkbox.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_column.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_control.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_edittext.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_0.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_0_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_1.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_checkbox_1_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_downarrow.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_leftarrow.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_listbox_down.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_listbox_up.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_listbox_up_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_0.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_0_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_1.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_radiobutton_1_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_rightarrow.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spindown_0.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spindown_1.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spindown_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spinup_0.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spinup_1.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_spinup_dis.c" />
-    <ClCompile Include="..\..\..\gluit\glui_img_uparrow.c" />
-    <ClCompile Include="..\..\..\gluit\glui_listbox.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_mouse_iaction.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_node.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_panel.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_quaternion.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_radio.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_rollout.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_rotation.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_separator.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_slider.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_spinner.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_statictext.cc" />
-    <ClCompile Include="..\..\..\gluit\glui_translation.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\gluit\freeglut_internal.h" />
-    <ClInclude Include="..\..\..\gluit\freeglut_teapot_data.h" />
-    <ClInclude Include="..\..\..\gluit\glui_algebra3.h" />
-    <ClInclude Include="..\..\..\gluit\glui_arcball.h" />
-    <ClInclude Include="..\..\..\gluit\glui_quaternion.h" />
-    <ClInclude Include="..\..\..\gluit\glui_stdinc.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
