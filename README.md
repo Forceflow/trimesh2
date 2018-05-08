@@ -1,4 +1,5 @@
 # TriMesh2 (2.13)
+[![Build Status](https://travis-ci.org/Forceflow/trimesh2.svg?branch=master)](https://travis-ci.org/Forceflow/trimesh2)
 
 A C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes.
 
