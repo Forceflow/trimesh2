@@ -6,6 +6,8 @@ A C++ library and set of utilities for input, output, and basic manipulation of 
 ![trimesh2 logo](https://raw.githubusercontent.com/Forceflow/trimesh2/master/html/trimesh_logo.jpg)
 
 This is a fork of the [TriMesh2 library](http://gfx.cs.princeton.edu/proj/trimesh2/) (originally by [Szymon Rusinkiewicz](https://www.cs.princeton.edu/~smr/)), which I use a lot in my other graphics projects. I like TriMesh2 because of the low setup costs required to do model loading, as well as the robust and powerful implementation of model manipulation.
+
+The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited Win32 support (through MinGW compilation targets). The primary aim of this fork is to provide a stable MSVC and easy to build solution, for both x86 and x64 targets.
  
 ## Getting started
  * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
@@ -43,8 +45,6 @@ The following utility programs are included:
  * **xf**: Create or compose transformations in .xf files
 
 ## Fork Details
-
-The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited Win32 support (through MinGW compilation targets). The primary aim of this fork is to provide a stable MSVC and easy to build solution, for both x86 and x64 targets.
 
 Notable changes/additions to vanilla trimesh2
  * Fixes for MSVC 14.0 compilation
