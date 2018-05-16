@@ -12,7 +12,7 @@ for their alignment.
 #include "TriMesh_algo.h"
 #include "ICP.h"
 #include "timestamp.h"
-#ifdef _MSC_VER
+#ifdef _WIN32
 # include "wingetopt.h"
 #else
 # include <unistd.h>
