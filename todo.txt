@@ -1,0 +1,3 @@
+- More VCProjects for build (xf and grid_overlap)
+- Remove Windows SDK dependency in all builds (should be fixed in VS2019, now defaulting to SDK 8.1 which won't be installed by default :()
+- Remove subproject dependencies
