@@ -239,9 +239,11 @@ ModelManifest.xml
 *.exe
 *.out
 *.app
-/msvc/vs2015/trimesh2.VC.db
 *.opendb
 *.iobj
 *.ipdb
 *.db
 *.db
+
+#Filters
+¨.filters
