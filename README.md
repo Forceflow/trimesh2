@@ -11,13 +11,13 @@ The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited 
  
 ## Getting started
  * Download a [prebuilt release](https://github.com/Forceflow/trimesh2/releases) of trimesh2 or build the library yourself. The static library will be called `trimesh.lib`, the debug version is `trimeshd.lib`.
-  * For **Windows**, build solutions for VS2017 and VS2019 are provided in the `mscv`folder. All solutions work in the free Community Editions of VS.
-    * The built library will be placed in a folder named `lib.(architecture).(visual studio version)`. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
-    * The builds of the utilities will be placed in a folder named `util.(architecture).(visual studio version)`. For example, for a 32-bit Visual Studio 2019, they will be in `util.win32.vs142`.
+  * For **Windows**, build solutions for VS2017 and VS2019 are provided in the `mscv`folder. All solutions are verified working in the [free Community Editions](https://visualstudio.microsoft.com/vs/community/) of VS.
+    * The built libraries will be placed in a folder named `lib.(architecture).(visual studio version)` in the trimesh2 root folder. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`.
+    * The built utilities will be placed in a folder named `util.(architecture).(visual studio version)` in the trimesh2 root folder. For example, for a 32-bit Visual Studio 2019, they will be in `util.win32.vs142`.
    * For **Linux**, a makefile is provided. You might need additional packages before you can build on your system. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
    * I'm being told it builds on **OSX** using the provided makefile too, but I have no way to check. If you encounter problems, please, file an issue report :)
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
- * For inspiration on how to use the library, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`
+ * For inspiration on how to use the library and its various features, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`. Of cou
 
 ## Info
 Legacy:
@@ -48,10 +48,13 @@ The following utility programs are included:
 
 ## Fork Details
 
-Notable changes/additions to vanilla trimesh2
- * Fixes for MSVC 14.0 compilation
- * MSVC project for Visual Studio Community Edition 2017
- * Fixes for FreeGlut / Gluit compilation in VS 2017
- * Added (experimental) 64-bit MSVC compilation support
+This fork stays as close as possible to the original [trimesh2](http://gfx.cs.princeton.edu/proj/trimesh2/) code, only changing the actual source files when a solution for compilation errors cannot be reached through VS pre-build steps.
+
+Notable changes compared to vanilla trimesh2
+ * Fixes for MSVC 14.0/15.0 compilation
+ * MSVC project for Visual Studio Community Edition 2017 and 2019
+ * Fixes for FreeGlut / Gluit compilation in VS 2017 and 2019
+ * Fixes for wingetopt replacement in MSVC
+ * Added 64-bit MSVC compilation support
 
 For todo/planned features, see todo.txt.
