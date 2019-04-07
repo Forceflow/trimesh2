@@ -17,7 +17,7 @@ The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited 
    * For **Linux**, a makefile is provided. You might need additional packages before you can build on your system. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
    * I'm being told it builds on **OSX** using the provided makefile too, but I have no way to check. If you encounter problems, please, file an issue report :)
  * In your own project, make sure you include the header `include/TriMesh.h`, and make sure the static library is in your build path. All Trimesh2 functions will be in the `TriMesh` namespace.
- * For inspiration on how to use the library and its various features, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`. Of cou
+ * For inspiration on how to use the library and its various features, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`.
 
 ## Info
 Legacy:
