@@ -58,3 +58,10 @@ Notable changes compared to vanilla trimesh2
  * Added 64-bit MSVC compilation support
 
 For todo/planned features, see todo.txt.
+
+## See Also
+
+Other software for importing and manipulating 3D models:
+ * [Tiny OBJ Loader](https://github.com/syoyo/tinyobjloader) (by @syoyo)
+ * [Tiny PLY](https://github.com/ddiakopoulos/tinyply) (by @ddiakopoulos)
+ * [Open Asset Import Library](http://www.assimp.org/) (ASSIMP)
