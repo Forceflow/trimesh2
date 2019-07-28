@@ -6,6 +6,10 @@ mesh_view.cc
 Simple viewer
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
 #include "XForm.h"
@@ -25,7 +29,6 @@ Simple viewer
 using namespace std;
 using namespace trimesh;
 
-
 #include "shaders.inc"
 
 
@@ -35,6 +38,7 @@ vector<TriMesh *> meshes;
 vector<xform> xforms;
 vector<bool> visible;
 vector<string> filenames;
+vector<float> feature_sizes;
 
 TriMesh::BSphere global_bsph;
 xform global_xf;
@@ -55,7 +59,8 @@ bool draw_shiny = true;
 bool white_bg = false;
 bool grab_only = false;
 bool avoid_tstrips = false;
-int point_size = 1, line_width = 1;
+float point_size_fudge = 2.5f;
+int line_width = 1;
 
 
 // Signal a redraw
@@ -122,7 +127,9 @@ bool autospin()
 void initGL()
 {
 	gl.make_shader("unlit", unlit_vert, unlit_frag);
+	gl.make_shader("unlit_point", unlit_point_vert, unlit_frag);
 	gl.make_shader("phong", phong_vert, phong_frag);
+	gl.make_shader("phong_point", phong_point_vert, phong_frag);
 	gl.make_shader("flat", flat_vert, flat_frag);
 	if (gl.slow_tstrips())
 		avoid_tstrips = true;
@@ -235,10 +242,6 @@ void draw_mesh(int i)
 	}
 
 	// Figure out options and passes
-	bool unlit = (!draw_lit || draw_index);
-	bool phong = (!unlit && !draw_flat);
-	bool flat = (!unlit && !phong);
-
 	bool have_faces = avoid_tstrips ? !mesh->faces.empty() :
 		!mesh->tstrips.empty();
 	bool have_colors = !mesh->colors.empty();
@@ -250,11 +253,15 @@ void draw_mesh(int i)
 	bool meshcolor = (!draw_index && !draw_falsecolor &&
 		have_colors && draw_meshcolor);
 
+	bool unlit = (!draw_lit || draw_index);
+	bool flat = (!unlit && draw_flat && !points_pass);
+	bool phong = (!unlit && !flat);
+
 	// Activate shader and bind data
 	if (unlit)
-		gl.use_shader("unlit");
+		gl.use_shader(points_pass ? "unlit_point" : "unlit");
 	else if (phong)
-		gl.use_shader("phong");
+		gl.use_shader(points_pass ? "phong_point" : "phong");
 	else // if (flat)
 		gl.use_shader("flat");
 
@@ -279,7 +286,13 @@ void draw_mesh(int i)
 
 	// Drawing passes
 	if (points_pass) {
-		glPointSize(float(point_size));
+		GLint V[4];
+		glGetIntegerv(GL_VIEWPORT, V);
+		GLint width = V[2], height = V[3];
+		float pointscale = hypot(width, height) / camera.fov();
+		pointscale *= feature_sizes[i] * point_size_fudge;
+		gl.uniform1f("pointscale", pointscale);
+		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 		gl.draw_points(mesh->vertices.size());
 	}
 
@@ -799,9 +812,9 @@ void keyboardfunc(unsigned char key, int, int)
 		case 'l':
 			draw_lit = !draw_lit; break;
 		case 'p':
-			point_size++; break;
+			point_size_fudge *= 1.1f; break;
 		case 'P':
-			point_size = max(1, point_size - 1); break;
+			point_size_fudge /= 1.1f; break;
 		case Ctrl+'p':
 			draw_points = !draw_points; break;
 		case 's':
@@ -895,12 +908,14 @@ int main(int argc, char *argv[])
 		xforms.push_back(xform());
 		visible.push_back(false);
 		filenames.push_back(filename);
+		feature_sizes.push_back(0.0f); // Computed below
 	}
 	if (meshes.empty())
 		usage();
 
 #pragma omp parallel for
 	for (size_t i = 0; i < meshes.size(); i++) {
+		feature_sizes[i] = meshes[i]->feature_size();
 		meshes[i]->need_tstrips();
 		meshes[i]->clear_grid();
 		meshes[i]->clear_faces();

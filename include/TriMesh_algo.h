@@ -194,6 +194,16 @@ extern void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 	const KDtree *kd1, const KDtree *kd2,
 	float &area, float &rmsdist);
 
+// Return intersection over union between mesh1 and mesh2
+extern float iou(TriMesh *mesh1, TriMesh *mesh2);
+
+extern float iou(TriMesh *mesh1, TriMesh *mesh2,
+	const xform &xf1, const xform &xf2);
+
+extern float iou(TriMesh *mesh1, TriMesh *mesh2,
+	const xform &xf1, const xform &xf2,
+	const KDtree *kd1, const KDtree *kd2);
+
 // Find separate mesh vertices that should be "shared": they lie on separate
 // connected components, but they are within "tol" of each other.
 extern void shared(TriMesh *mesh, float tol);

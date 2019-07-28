@@ -97,7 +97,9 @@ see how it's used.  Here's a trivial program to help you get started:
 
 
 #include "TriMesh.h"
+#include <cstdlib>
 #include <iostream>
+using namespace trimesh;
 using namespace std;
 
 int main(int argc, char *argv[])

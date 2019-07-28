@@ -18,9 +18,11 @@ namespace trimesh {
 // find_overlap in both directions, below
 static void find_overlap_onedir(TriMesh *mesh1, TriMesh *mesh2,
 				const xform &xf1, const xform &xf2,
-				const KDtree *kd2, float &area, float &rmsdist)
+				const KDtree *kd2,
+				float &overlap_area, float &nonoverlap_area,
+				float &rmsdist)
 {
-	area = 0.0f;
+	overlap_area = 0.0f;
 	rmsdist = 0.0f;
 	float area_considered = 0.0f;
 
@@ -44,18 +46,23 @@ static void find_overlap_onedir(TriMesh *mesh1, TriMesh *mesh2,
 		if (((xf12r * mesh1->normals[ind]) DOT mesh2->normals[ind2])
 				<= 0.0f)
 			continue;
-		area += this_area;
+		overlap_area += this_area;
 		rmsdist += this_area *
 			sqr((p - point(q)) DOT mesh2->normals[ind2]);
 	}
 
-	if (!area)
-		return;
+	float total_area = mesh1->stat(TriMesh::STAT_SUM,
+		TriMesh::STAT_FACEAREA);
 
-	rmsdist /= area;
-	rmsdist = sqrt(rmsdist);
-	area *= mesh1->stat(TriMesh::STAT_SUM, TriMesh::STAT_FACEAREA)
-		/ area_considered;
+	// Put the "m" and "s" in rms
+	if (overlap_area) {
+		rmsdist /= overlap_area;
+		rmsdist = sqrt(rmsdist);
+	}
+
+	// Correct overlap_area for area_considered
+	overlap_area *= total_area / area_considered;
+	nonoverlap_area = total_area - overlap_area;
 }
 
 
@@ -75,17 +82,45 @@ void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 	mesh2->need_adjacentfaces();
 	mesh2->need_pointareas();
 
-	float area1, area2, rmsdist1, rmsdist2;
+	float area1, area2, non1, non2, rmsdist1, rmsdist2;
 
 	TriMesh::dprintf("Finding overlap 1->2... ");
-	find_overlap_onedir(mesh1, mesh2, xf1, xf2, kd2, area1, rmsdist1);
+	find_overlap_onedir(mesh1, mesh2, xf1, xf2, kd2, area1, non1, rmsdist1);
 	TriMesh::dprintf("area = %g, RMS distance = %g\n", area1, rmsdist1);
 	TriMesh::dprintf("Finding overlap 2->1... ");
-	find_overlap_onedir(mesh2, mesh1, xf2, xf1, kd1, area2, rmsdist2);
+	find_overlap_onedir(mesh2, mesh1, xf2, xf1, kd1, area2, non2, rmsdist2);
 	TriMesh::dprintf("area = %g, RMS distance = %g\n", area2, rmsdist2);
 	area = 0.5f * (area1 + area2);
 	if (area)
 		rmsdist = 0.5f * (rmsdist1 + rmsdist2);
+}
+
+
+// Return intersection-over-union between mesh1 and mesh2.
+float iou(TriMesh *mesh1, TriMesh *mesh2,
+          const xform &xf1, const xform &xf2,
+	  const KDtree *kd1, const KDtree *kd2)
+{
+	mesh1->need_normals();
+	mesh1->need_neighbors();
+	mesh1->need_adjacentfaces();
+	mesh1->need_pointareas();
+	mesh2->need_normals();
+	mesh2->need_neighbors();
+	mesh2->need_adjacentfaces();
+	mesh2->need_pointareas();
+
+	float area1, area2, non1, non2, rmsdist1, rmsdist2;
+
+	TriMesh::dprintf("Finding overlap 1->2... ");
+	find_overlap_onedir(mesh1, mesh2, xf1, xf2, kd2, area1, non1, rmsdist1);
+	TriMesh::dprintf("area = %g, RMS distance = %g\n", area1, rmsdist1);
+	TriMesh::dprintf("Finding overlap 2->1... ");
+	find_overlap_onedir(mesh2, mesh1, xf2, xf1, kd1, area2, non2, rmsdist2);
+	TriMesh::dprintf("area = %g, RMS distance = %g\n", area2, rmsdist2);
+	float int_area = 0.5f * (area1 + area2);
+	float union_area = area1 + non1 + area2 + non2 - int_area;
+	return int_area / union_area;
 }
 
 
@@ -108,6 +143,26 @@ void find_overlap(TriMesh *mesh1, TriMesh *mesh2,
 	find_overlap(mesh1, mesh2, xf1, xf2, kd1, kd2, area, rmsdist);
 	delete kd2;
 	delete kd1;
+}
+
+float iou(TriMesh *mesh1, TriMesh *mesh2)
+{
+	KDtree *kd1 = new KDtree(mesh1->vertices);
+	KDtree *kd2 = new KDtree(mesh2->vertices);
+	float ret = iou(mesh1, mesh2, xform(), xform(), kd1, kd2);
+	delete kd2;
+	delete kd1;
+	return ret;
+}
+
+float iou(TriMesh *mesh1, TriMesh *mesh2, const xform &xf1, const xform &xf2)
+{
+	KDtree *kd1 = new KDtree(mesh1->vertices);
+	KDtree *kd2 = new KDtree(mesh2->vertices);
+	float ret = iou(mesh1, mesh2, xf1, xf2, kd1, kd2);
+	delete kd2;
+	delete kd1;
+	return ret;
 }
 
 } // namespace trimesh

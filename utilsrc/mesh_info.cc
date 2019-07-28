@@ -33,6 +33,7 @@ void usage(const char *myname)
 	fprintf(stderr, "	vert_stdev	Standard deviation of vertices around mean\n");
 	fprintf(stderr, "	face_stdev	Standard deviation of faces around mean\n");
 	fprintf(stderr, "	overlap infile2	Overlap area and RMS distance to other mesh\n");
+	fprintf(stderr, "	iou infile2	Intersection-over-union area with other mesh\n");
 	fprintf(stderr, "\nStatistical operations:\n");
 	fprintf(stderr, "	min		Minimum\n");
 	fprintf(stderr, "	minabs		Minimum absolute value\n");
@@ -148,6 +149,15 @@ int main(int argc, char *argv[])
 		float area = 0.0f, rmsdist = 0.0f;
 		find_overlap(mesh, mesh2, xform(), xf2, area, rmsdist);
 		printf("%g %g\n", area, rmsdist);
+		return 0;
+	} else if (!strcmp(info_type, "iou") && info_param) {
+		TriMesh *mesh2 = TriMesh::read(info_param);
+		if (!mesh2)
+			usage(argv[0]);
+		xform xf2;
+		if (use_xf)
+			xf2.read(xfname(argv[3]));
+		printf("%g\n", iou(mesh, mesh2, xform(), xf2));
 		return 0;
 	}
 

@@ -387,7 +387,8 @@ struct GLManager::UniformInfo
 {
 	string name;
 	GLenum type;
-	UniformInfo() : type(GL_FLOAT)
+	GLint location;
+	UniformInfo() : type(GL_FLOAT), location(-1)
 		{}
 };
 
@@ -401,8 +402,9 @@ struct GLManager::AttributeInfo
 	const float *p;
 	int floats_per_attribute;
 	size_t stride, offset;
+	GLint location;
 	AttributeInfo() : buf(0), p(0),
-		floats_per_attribute(0), stride(0), offset(0)
+		floats_per_attribute(0), stride(0), offset(0), location(-1)
 		{}
 };
 
@@ -623,6 +625,7 @@ unsigned GLManager::make_shader(const char *name,
 		ui.type = type;
 		if (type == GL_SAMPLER_2D)
 			shaders.back()->texunit_binding.push_back(0);
+		ui.location = glGetUniformLocation(program, &uname[0]);
 	}
 
 	// Buggy on some drivers...
@@ -643,6 +646,7 @@ unsigned GLManager::make_shader(const char *name,
 			ai.floats_per_attribute = 3 * size;
 		else if (type == GL_FLOAT_VEC4)
 			ai.floats_per_attribute = 4 * size;
+		ai.location = glGetAttribLocation(program, &aname[0]);
 	}
 
 	// Make this shader active
@@ -700,7 +704,7 @@ bool GLManager::use_shader(unsigned ind)
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	for (size_t i = 0; i < current_shader->attribute_info.size(); i++)
 		if (current_shader->have_attribute[i])
-			glDisableVertexAttribArray(i);
+			glDisableVertexAttribArray(current_shader->attribute_info[i].location);
 
 	// Find new shader
 	for (size_t i = 0; i < shaders.size(); i++) {
@@ -757,9 +761,9 @@ bool GLManager::use_shader(unsigned ind)
 			continue;
 		AttributeInfo &ai = current_shader->attribute_info[i];
 		if (ai.buf)
-			attributearray(i, ai.floats_per_attribute, ai.buf, ai.stride, ai.offset);
+			attributearray(ai.location, ai.floats_per_attribute, ai.buf, ai.stride, ai.offset);
 		else if (ai.p)
-			attributearray(i, ai.floats_per_attribute, ai.p, ai.stride, ai.offset);
+			attributearray(ai.location, ai.floats_per_attribute, ai.p, ai.stride, ai.offset);
 	}
 
 	// Bind the textures we're using
@@ -822,16 +826,20 @@ bool GLManager::uniform_boilerplate(int ind, unsigned type)
 		eprintf("GLManager::uniform : no active shader program\n");
 		return false;
 	}
-	if (ind < 0 || ind >= (int) current_shader->have_uniform.size()) {
+	size_t which = 0;
+	for (which = 0; which < current_shader->uniform_info.size(); which++)
+		if (current_shader->uniform_info[which].location == ind)
+			break;
+	if (which == current_shader->uniform_info.size()) {
 		eprintf("GLManager::uniform : invalid uniform\n");
 		return false;
 	}
-	if (current_shader->uniform_info[ind].type != (GLenum) type) {
+	if (current_shader->uniform_info[which].type != (GLenum) type) {
 		eprintf("GLManager::uniform : type mismatch specifying uniform %s\n",
-			current_shader->uniform_info[ind].name.c_str());
+			current_shader->uniform_info[which].name.c_str());
 		return false;
 	}
-	current_shader->have_uniform[ind] = true;
+	current_shader->have_uniform[which] = true;
 	return true;
 }
 
@@ -901,19 +909,23 @@ void GLManager::attributearray(int ind, int floats_per_attribute,
 		eprintf("GLManager::attribute : no active shader program\n");
 		return;
 	}
-	if (ind < 0 || ind >= (int) current_shader->have_attribute.size()) {
+	size_t which = 0;
+	for (which = 0; which < current_shader->attribute_info.size(); which++)
+		if (current_shader->attribute_info[which].location == ind)
+			break;
+	if (which == current_shader->attribute_info.size()) {
 		eprintf("GLManager::attribute : invalid attribute\n");
 		return;
 	}
-	if (current_shader->attribute_info[ind].floats_per_attribute !=
+	if (current_shader->attribute_info[which].floats_per_attribute !=
 		floats_per_attribute) {
 		eprintf("GLManager::attribute : type mismatch specifying attribute %s\n",
-			current_shader->attribute_info[ind].name.c_str());
+			current_shader->attribute_info[which].name.c_str());
 		return;
 	}
 	use_buffer();
-	current_shader->have_attribute[ind] = true;
-	AttributeInfo &ai = current_shader->attribute_info[ind];
+	current_shader->have_attribute[which] = true;
+	AttributeInfo &ai = current_shader->attribute_info[which];
 	ai.buf = 0;
 	ai.p = p;
 	ai.stride = stride;
@@ -932,19 +944,23 @@ void GLManager::attributearray(int ind, int floats_per_attribute, unsigned buf,
 		eprintf("GLManager::attribute : no active shader program\n");
 		return;
 	}
-	if (ind < 0 || ind >= (int) current_shader->have_attribute.size()) {
+	size_t which = 0;
+	for (which = 0; which < current_shader->attribute_info.size(); which++)
+		if (current_shader->attribute_info[which].location == ind)
+			break;
+	if (which == current_shader->attribute_info.size()) {
 		eprintf("GLManager::attribute : invalid attribute\n");
 		return;
 	}
-	AttributeInfo &ai = current_shader->attribute_info[ind];
+	AttributeInfo &ai = current_shader->attribute_info[which];
 	if (ai.floats_per_attribute != floats_per_attribute) {
 		eprintf("GLManager::attribute : type mismatch specifying attribute %s\n",
-			current_shader->attribute_info[ind].name.c_str());
+			current_shader->attribute_info[which].name.c_str());
 		return;
 	}
 	if (!use_buffer(buf))
 		return;
-	current_shader->have_attribute[ind] = true;
+	current_shader->have_attribute[which] = true;
 	ai.buf = buf;
 	ai.p = 0;
 	ai.stride = stride;
@@ -962,17 +978,21 @@ bool GLManager::attribute_boilerplate(int ind, int floats_per_attribute)
 		eprintf("GLManager::attribute : no active shader program\n");
 		return false;
 	}
-	if (ind < 0 || ind >= (int) current_shader->have_attribute.size()) {
+	size_t which = 0;
+	for (which = 0; which < current_shader->attribute_info.size(); which++)
+		if (current_shader->attribute_info[which].location == ind)
+			break;
+	if (which == current_shader->attribute_info.size()) {
 		eprintf("GLManager::attribute : invalid attribute\n");
 		return false;
 	}
-	AttributeInfo &ai = current_shader->attribute_info[ind];
+	AttributeInfo &ai = current_shader->attribute_info[which];
 	if (ai.floats_per_attribute != floats_per_attribute) {
 		eprintf("GLManager::attribute : type mismatch specifying attribute %s\n",
-			current_shader->attribute_info[ind].name.c_str());
+			current_shader->attribute_info[which].name.c_str());
 		return false;
 	}
-	current_shader->have_attribute[ind] = true;
+	current_shader->have_attribute[which] = true;
 	ai.buf = 0;
 	ai.p = 0;
 	ai.stride = 0;
@@ -1625,10 +1645,8 @@ bool GLManager::shader_ready()
 
 	// Check uniforms
 	for (size_t i = 0; i < current_shader->have_uniform.size(); i++) {
-		if (current_shader->have_uniform[i])
-			continue;
-		if (strncmp(current_shader->uniform_info[i].name.c_str(),
-		    "gl_", 3) == 0)
+		if (current_shader->uniform_info[i].location < 0 ||
+		    current_shader->have_uniform[i])
 			continue;
 		eprintf("GLManager::shader_ready : shader %s failed to set uniform %s\n",
 			current_shader->name.c_str(),
@@ -1638,7 +1656,8 @@ bool GLManager::shader_ready()
 
 	// Check attributes
 	for (size_t i = 0; i < current_shader->have_attribute.size(); i++) {
-		if (current_shader->have_attribute[i])
+		if (current_shader->attribute_info[i].location < 0 ||
+		    current_shader->have_attribute[i])
 			continue;
 		const char *aname = current_shader->attribute_info[i].name.c_str();
 		if (strcmp(aname, current_shader->vertex_info.name.c_str()) == 0 && current_shader->have_vertex)

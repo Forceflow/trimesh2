@@ -331,8 +331,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (num_bad_faces)
+	if (num_bad_faces) {
 		printf("%d one-sided fins... ", num_bad_faces); fflush(stdout);
+	}
 
 	// If any of the faces are still bad, things are not going
 	// well.  Nuke all affected vertices.

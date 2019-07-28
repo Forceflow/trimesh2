@@ -8,6 +8,7 @@ Simple transformations on .xf files
 
 #include "Vec.h"
 #include "XForm.h"
+#include "timestamp.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -26,6 +27,31 @@ static bool isanumber(const char *c)
 }
 
 
+// Randomizes random number generator based on timestamp
+static void randomize()
+{
+	union {
+		timestamp t;
+		struct { unsigned u1, u2, u3, u4; } u;
+	} t;
+	t.t = now();
+	unsigned seed = t.u.u1 ^ t.u.u2 ^ t.u.u3 ^ t.u.u4;
+	xorshift_rnd(seed);
+	xorshift_rnd();
+	xorshift_rnd();
+}
+
+
+// Returns a random unit-length vector on the sphere
+static vec rnd_vec()
+{
+	float phi = uniform_rnd(M_2PIf);
+	float z = uniform_rnd(-1.0f);
+	float xy = sqrt(1.0f - sqr(z));
+	return vec(xy * cos(phi), xy * sin(phi), z);
+}
+
+
 void usage(const char *myname)
 {
 	fprintf(stderr, "Usage: %s commands...\n", myname);
@@ -38,6 +64,7 @@ void usage(const char *myname)
 	fprintf(stderr, "	-q qr qi qj qk	Rotate by given quaternion\n");
 	fprintf(stderr, "	-v qi qj qk iqr	Rotate by given VRIP-style quaternion\n");
 	fprintf(stderr, "	-trans x y z	Translate by (x,y,z)\n");
+	fprintf(stderr, "	-rnd rot trans	Apply a random transform with maximum magnitude in rot, trans\n");
 	fprintf(stderr, "	-inv		Invert the current transformation\n");
 	fprintf(stderr, "	-print		Display current transformation on stdout\n");
 	fprintf(stderr, "	-o file.xf	Write current transformation to file\n");
@@ -157,6 +184,21 @@ int main(int argc, char *argv[])
 			}
 			Vec<3,double> t(atof(argv[i-2]), atof(argv[i-1]), atof(argv[i]));
 			xf = xf * xform::trans(t);
+		} else if (!strcmp(argv[i], "-rnd") ||
+		           !strcmp(argv[i], "-random")) {
+			i += 2;
+			if (!(i < argc && isanumber(argv[i]) &&
+			      isanumber(argv[i-1]))) {
+				fprintf(stderr, "\n-rnd requires two arguments\n\n");
+				usage(argv[0]);
+			}
+			randomize();
+			float rotamount = uniform_rnd(atof(argv[i-1]));
+			vec rotaxis = rnd_vec();
+			float transamount = uniform_rnd(atof(argv[i]));
+			vec transdir = rnd_vec();
+			xf = xf * xform::trans(transamount * transdir) *
+				xform::rot(rotamount, rotaxis);
 		} else if (!strcmp(argv[i], "-inv") ||
 		           !strcmp(argv[i], "-invert")) {
 			invert(xf);
