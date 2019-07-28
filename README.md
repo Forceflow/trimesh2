@@ -20,10 +20,7 @@ The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited 
  * For inspiration on how to use the library and its various features, check out the utilities in the `utilsrc` folder, or just start by loading a model : `TriMesh* themesh = TriMesh::read(filename);`.
 
 ## Info
-Legacy:
-
- * For the original TriMesh2 project, see [the Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
- * Original MSVC 2012 project by Bengt Rosenberger.
+For the original TriMesh2 project, see [the Trimesh2 homepage](http://gfx.cs.princeton.edu/proj/trimesh2/).
  
 Features: 
 
