@@ -653,7 +653,9 @@ static inline void orthogonalize(XForm<T> &xf)
 }
 
 
-// Interpolate between xforms
+// Interpolate between xforms, returning an xform that's a fraction "a" of
+// the way from x to y.  Performs screw decomposition, interpolates rotation
+// and translation along screw axis, and constructs in-plane translation.
 template <class T, class S>
 static inline XForm<T> mix(const XForm<T> &x, const XForm<T> &y, const S &a)
 {

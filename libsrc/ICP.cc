@@ -13,39 +13,28 @@ adaptive outlier rejection, and symmetric point-to-plane minimization.
 #include "lineqn.h"
 using namespace std;
 
-#if defined(_MSC_VER)
-#include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
-#endif
 
-
-#define INITIAL_ITERS 2
-#define MAX_ITERS 199
-#define TERMINATION_ITER_THRESH 20
+#define MAX_ITERS 150
+#define TERMINATION_ITER_THRESH 25
 #define FINAL_ITERS 2
 #define MIN_PAIRS 10
-#define DESIRED_PAIRS 2000
+#define DESIRED_PAIRS 200
 #define DESIRED_PAIRS_FINAL 5000
 #define CDF_UPDATE_INTERVAL 20
+#define APPROX_EPS 0.05f
 #define REJECT_BDY false
 #define USE_NORMCOMPAT true
-#define REGULARIZATION 0.005f
-#define MEDIAN_TO_SIGMA 1.4826f
-#define DIST_THRESH_MULT_START 4.0f
-#define DIST_THRESH_MULT_FINAL 2.0f
-#define NORMDOT_THRESH_START 0.5f
-#define NORMDOT_THRESH_FINAL 0.9f
-#define THRESH_RATE_OF_CHANGE 0.025f
+#define HUBER_THRESH_MULT 2.0f
+#define REGULARIZATION 0.0002f
+#define DIST_THRESH_MULT 12.0f
+#define DIST_THRESH_MULT_FINAL 4.0f
+#define ANGLE_THRESH_MULT 1.5f
+#define ANGLE_THRESH_MIN 0.1f
+#define ANGLE_THRESH_MAX 1.0f
 #define dprintf TriMesh::dprintf
 
 
 namespace trimesh {
-
-
-// Type of ICP constraint
-enum ICP_iter_type {
-	ICP_POINT_TO_POINT, ICP_POINT_TO_PLANE
-};
 
 
 // A pair of points, with associated normals
@@ -64,176 +53,51 @@ class NormCompat : public KDtree::CompatFunc {
 private:
 	TriMesh *m;
 	const vec &n;
+	float thresh;
 
 public:
-	NormCompat(const vec &n_, TriMesh *m_): m(m_), n(n_)
+	NormCompat(const vec &n_, TriMesh *m_, float thresh_):
+		m(m_), n(n_), thresh(thresh_)
 		{}
 	virtual bool operator () (const float *p) const
 	{
 		int idx = (const point *) p - &(m->vertices[0]);
-		return (n DOT m->normals[idx]) > 0.0f;
+		return (n DOT m->normals[idx]) > thresh;
 	}
 };
-
-
-// A spatial grid datastructure for fast overlap computation
-class Grid {
-private:
-	enum { GRID_SHIFT = 4, GRID_MAX = (1 << GRID_SHIFT) - 1 };
-	float xmin, xmax, ymin, ymax, zmin, zmax, scale;
-	vector<char> g;
-public:
-	inline float bbox_size() const
-	{
-		return dist(point(xmin, ymin, zmin), point(xmax, ymax, zmax));
-	}
-	inline bool valid(const point &p) const
-	{
-		return p[0] >= xmin && p[1] >= ymin && p[2] >= zmin &&
-		       p[0] <= xmax && p[1] <= ymax && p[2] <= zmax;
-	}
-	inline int ind(int xcell, int ycell, int zcell) const
-	{
-		xcell = clamp(xcell, 0, int(GRID_MAX));
-		ycell = clamp(ycell, 0, int(GRID_MAX));
-		zcell = clamp(zcell, 0, int(GRID_MAX));
-		return (xcell << (2 * GRID_SHIFT)) +
-		       (ycell << GRID_SHIFT) +
-		        zcell;
-	}
-	inline int ind(const point &p) const
-	{
-		return ind(int(scale * (p[0] - xmin)),
-		           int(scale * (p[1] - ymin)),
-		           int(scale * (p[2] - zmin)));
-	}
-	inline bool overlaps(const point &p) const
-	{
-		return valid(p) && g[ind(p)];
-	}
-	Grid(const vector<point> &pts);
-};
-
-
-// Compute a Grid from a list of points
-Grid::Grid(const vector<point> &pts)
-{
-	size_t gsize = (1 << (3 * GRID_SHIFT));
-	g.resize(gsize);
-	if (pts.empty()) {
-		xmin = xmax = ymin = ymax = zmin = zmax = scale = 0.0f;
-		return;
-	}
-
-	// Find bounding box of pts
-	xmin = xmax = pts[0][0];
-	ymin = ymax = pts[0][1];
-	zmin = zmax = pts[0][2];
-	size_t npts = pts.size();
-	for (size_t i = 1; i < npts; i++) {
-		if      (pts[i][0] < xmin) xmin = pts[i][0];
-		else if (pts[i][0] > xmax) xmax = pts[i][0];
-		if      (pts[i][1] < ymin) ymin = pts[i][1];
-		else if (pts[i][1] > ymax) ymax = pts[i][1];
-		if      (pts[i][2] < zmin) zmin = pts[i][2];
-		else if (pts[i][2] > zmax) zmax = pts[i][2];
-	}
-	scale = 1.0f / max(max(xmax - xmin, ymax - ymin), zmax - zmin);
-	scale *= float(1 << GRID_SHIFT);
-
-	// Set grid cells of pts
-	vector<char> tmpg(1 << (3 * GRID_SHIFT));
-	for (size_t i = 0; i < npts; i++)
-		tmpg[ind(pts[i])] = 1;
-
-	// Dilate
-	const int xoff[27] = { -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	                        0,  0,  0,  0,  0,  0,  0,  0,  0,
-	                        1,  1,  1,  1,  1,  1,  1,  1,  1 };
-	const int yoff[27] = { -1, -1, -1,  0,  0,  0,  1,  1,  1,
-	                       -1, -1, -1,  0,  0,  0,  1,  1,  1,
-	                       -1, -1, -1,  0,  0,  0,  1,  1,  1 };
-	const int zoff[27] = { -1,  0,  1, -1,  0,  1, -1,  0,  1,
-	                       -1,  0,  1, -1,  0,  1, -1,  0,  1,
-	                       -1,  0,  1, -1,  0,  1, -1,  0,  1 };
-#pragma omp parallel for
-	for (ssize_t i = 0; i < gsize; i++) {
-		int x = i >> (2 * GRID_SHIFT);
-		int y = (i >> GRID_SHIFT) & GRID_MAX;
-		int z = i & GRID_MAX;
-		for (int j = 0; j < 27; j++) {
-			// ind() clamps to the edge of the grid
-			if (tmpg[ind(x + xoff[j], y + yoff[j], z + zoff[j])]) {
-				g[i] = 1;
-				break;
-			}
-		}
-	}
-}
-
-
-// Return Grid for a mesh
-Grid *make_grid(TriMesh *mesh)
-{
-	return new Grid(mesh->vertices);
-}
 
 
 // Determine which points on mesh1 and mesh2 overlap the other,
-// filling in o1 and o2.  Also fills in maxdist, if it is <= 0 on input.
+// filling in o1 and o2.
 void compute_overlaps(TriMesh *mesh1, TriMesh *mesh2,
                       const xform &xf1, const xform &xf2,
                       const KDtree *kd1, const KDtree *kd2,
-                      const Grid *g1, const Grid *g2,
                       vector<float> &o1, vector<float> &o2,
-                      float &maxdist, int verbose)
+                      float maxdist, int verbose)
 {
 	timestamp t = now();
-	if (maxdist <= 0.0f) {
-		if (g1 && g2) {
-			maxdist = min(g1->bbox_size(), g2->bbox_size());
-		} else {
-			mesh1->need_bbox();
-			mesh2->need_bbox();
-			maxdist = min(len(mesh1->bbox.size()),
-			              len(mesh2->bbox.size()));
-		}
-	}
 
-	const size_t nv1 = mesh1->vertices.size(), nv2 = mesh2->vertices.size();
+	const int nv1 = mesh1->vertices.size(), nv2 = mesh2->vertices.size();
 	o1.clear(); o1.resize(nv1);
 	o2.clear(); o2.resize(nv2);
 
 	xform xf12 = inv(xf2) * xf1;
 	xform xf21 = inv(xf1) * xf2;
-	float maxdist2 = sqr(maxdist);
 
 #pragma omp parallel
 	{
 #pragma omp for nowait
-		for (ssize_t i = 0; i < nv1; i++) {
+		for (int i = 0; i < nv1; i++) {
 			point p = xf12 * mesh1->vertices[i];
-			if (g2 && !g2->overlaps(p))
-				continue;
-			if (kd2) {
-				const float *match = kd2->closest_to_pt(p, maxdist2);
-				if (!match)
-					continue;
-			}
-			o1[i] = 1;
+			if (kd2->exists_pt_within(p, maxdist))
+				o1[i] = 1;
 		}
 
 #pragma omp for
-		for (ssize_t i = 0; i < nv2; i++) {
+		for (int i = 0; i < nv2; i++) {
 			point p = xf21 * mesh2->vertices[i];
-			if (g1 && !g1->overlaps(p))
-				continue;
-			if (kd1) {
-				const float *match = kd1->closest_to_pt(p, maxdist2);
-				if (!match)
-					continue;
-			}
-			o2[i] = 1;
+			if (kd1->exists_pt_within(p, maxdist))
+				o2[i] = 1;
 		}
 	} // omp parallel
 
@@ -249,7 +113,7 @@ static void select_and_match(TriMesh *mesh1, TriMesh *mesh2,
                              const xform &xf1, const xform &xf2,
                              const KDtree *kd2,
                              const vector<float> &sampcdf1, float cdfincr,
-                             float maxdist, bool do_flip,
+                             float maxdist, float angle_thresh, bool do_flip,
                              vector<PtPair> &pairs)
 {
 	xform nxf1 = norm_xf(xf1);
@@ -261,7 +125,9 @@ static void select_and_match(TriMesh *mesh1, TriMesh *mesh2,
 	bool is_pointcloud2 = (mesh2->faces.empty() &&
 		mesh2->tstrips.empty() && mesh2->grid.empty());
 	bool is_pointcloud = (is_pointcloud1 || is_pointcloud2);
+
 	float maxdist2 = sqr(maxdist);
+	float normdot_thresh = cos(angle_thresh);
 
 	size_t i = 0, n = sampcdf1.size();
 	float cdfval = uniform_rnd(cdfincr);
@@ -302,10 +168,10 @@ static void select_and_match(TriMesh *mesh1, TriMesh *mesh2,
 		const float *match;
 		if (USE_NORMCOMPAT && !is_pointcloud) {
 			vec n12 = nxf12 * mesh1->normals[i];
-			NormCompat nc(n12, mesh2);
-			match = kd2->closest_to_pt(p12, maxdist2, &nc);
+			NormCompat nc(n12, mesh2, normdot_thresh);
+			match = kd2->closest_to_pt(p12, maxdist2, &nc, APPROX_EPS);
 		} else {
-			match = kd2->closest_to_pt(p12, maxdist2);
+			match = kd2->closest_to_pt(p12, maxdist2, APPROX_EPS);
 		}
 		if (!match)
 			continue;
@@ -331,113 +197,60 @@ static void select_and_match(TriMesh *mesh1, TriMesh *mesh2,
 }
 
 
-// Determinant of a 3x3 matrix
-static float det(const float (&A)[3][3])
-{
-	return A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) +
-	       A[0][1] * (A[1][2] * A[2][0] - A[1][0] * A[2][2]) +
-	       A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
-}
-
-
-// Do rigid-body point-to-point alignment.  (This is done in the early stages
-// of registration to improve stability.)
-static void align_pt2pt(const vector<PtPair> &pairs,
-			const point &centroid1, const point &centroid2,
-			xform &alignxf)
-{
-	size_t n = pairs.size();
-
-	float A[3][3] = { { 0 } };
-	for (size_t i = 0; i < n; i++) {
-		vec v1 = pairs[i].p1 - centroid1;
-		vec v2 = pairs[i].p2 - centroid2;
-		for (int j = 0; j < 3; j++)
-			for (int k = 0; k < 3; k++)
-				A[j][k] += v1[j] * v2[k];
-	}
-	float s[3], V[3][3];
-	svd<float,3,3>(A, s, V);
-	if ((det(A) < 0.0f) ^ (det(V) < 0.0f)) {
-		V[2][0] = -V[2][0];
-		V[2][1] = -V[2][1];
-		V[2][2] = -V[2][2];
-	}
-	alignxf = xform::trans(centroid1) *
-	          xform::fromarray(A) * transp(xform::fromarray(V)) *
-	          xform::trans(-centroid2);
-}
-
-
 // Do symmetric point-to-plane alignment, returning alignxf
 // as well as eigenvectors and inverse eigenvalues
-static void align_pt2pl(const vector<PtPair> &pairs, float scale,
-                        const point &centroid1, const point &centroid2,
-                        float (&evec)[6][6], float (&einv)[6],
-                        xform &alignxf)
+static void align_symm(const vector<PtPair> &pairs, float scale,
+                       const point &centroid1, const point &centroid2,
+                       float median_dist, xform &alignxf)
 {
-	size_t n = pairs.size();
+	float huber_thresh = HUBER_THRESH_MULT * scale * median_dist;
+	size_t npairs = pairs.size();
+	float A[6][6] = { { 0 } }, b[6] = { 0 };
+	for (size_t i = 0; i < npairs; i++) {
+		vec p1 = scale * (pairs[i].p1 - centroid1);
+		vec p2 = scale * (pairs[i].p2 - centroid2);
+		vec n = pairs[i].n1 + pairs[i].n2;
+		vec p = p1 + p2;
+		vec c = p CROSS n;
+		vec d = p1 - p2;
 
-	float b[6] = { 0 };
-	for (size_t i = 0; i < n; i++) {
-		vec p1 = pairs[i].p1 - centroid1;
-		vec p2 = pairs[i].p2 - centroid2;
-		const vec &n1 = pairs[i].n1;
-		const vec &n2 = pairs[i].n2;
-		vec nn = n1 + n2;
-		vec c = scale * (p1 CROSS n2 + p2 CROSS n1);
-		vec p12 = p1 - p2;
-		float d = scale * (p12 DOT nn);
+		float x[6] = { c[0], c[1], c[2], n[0], n[1], n[2] };
+		float dn = d DOT n;
 
-		float x[6] = { c[0], c[1], c[2], nn[0], nn[1], nn[2] };
+		// Huber weights, used for IRLS
+		float wt = huber_thresh / max(fabs(dn), huber_thresh);
+
 		for (int j = 0; j < 6; j++) {
-			b[j] += d * x[j];
+			b[j] += wt * dn * x[j];
 			for (int k = j; k < 6; k++)
-				evec[j][k] += x[j] * x[k];
+				A[j][k] += wt * x[j] * x[k];
 		}
-
-		// Regularization for rotational component - point to point
-		float reg = REGULARIZATION * sqr(scale);
-		evec[0][0] += reg * (sqr(p2[1]) + sqr(p2[2]));
-		evec[0][1] -= reg * p2[0] * p2[1];
-		evec[0][2] -= reg * p2[0] * p2[2];
-		evec[1][1] += reg * (sqr(p2[0]) + sqr(p2[2]));
-		evec[1][2] -= reg * p2[1] * p2[2];
-		evec[2][2] += reg * (sqr(p2[0]) + sqr(p2[1]));
-		vec c2 = p2 CROSS p12;
-		x[0] += reg * c2[0];
-		x[1] += reg * c2[1];
-		x[2] += reg * c2[2];
 	}
 
-	// Regularization for translational component
-	evec[3][3] += REGULARIZATION * n;
-	evec[4][4] += REGULARIZATION * n;
-	evec[5][5] += REGULARIZATION * n;
-
 	// Make matrix symmetric
-	for (int j = 0; j < 6; j++)
+	for (int j = 1; j < 6; j++)
 		for (int k = 0; k < j; k++)
-			evec[j][k] = evec[k][j];
+			A[j][k] = A[k][j];
 
 	// Eigen-decomposition and inverse
-	float eval[6];
-	eigdc<float,6>(evec, eval);
+	float eval[6], einv[6];
+	eigdc<float,6>(A, eval);
 	for (int i = 0; i < 6; i++)
-		einv[i] = 1.0f / eval[i];
+		einv[i] = 1.0f / (eval[i] + REGULARIZATION * eval[5]);
 
 	// Solve system
-	eigmult<float,6>(evec, einv, b);
+	eigmult<float,6>(A, einv, b);
 
 	// Extract rotation and translation
 	vec rot(b[0], b[1], b[2]), trans(b[3], b[4], b[5]);
 	float rotangle = atan(len(rot));
-	float cosangle = cos(rotangle);
-	trans *= cosangle / ((1.0f + cosangle) * scale);
+	trans *= cos(rotangle);
+	trans *= 1.0f / scale;
 
-	alignxf = xform::trans(trans + centroid1) *
-	          xform::rot(rotangle, rot) *
-	          xform::trans(trans - centroid2);
+	xform R = xform::rot(rotangle, rot);
+	alignxf = xform::trans(centroid1) *
+	          R * xform::trans(trans) * R *
+	          xform::trans(-centroid2);
 }
 
 
@@ -446,35 +259,28 @@ static void align_pt2pl_trans(const vector<PtPair> &pairs,
                               const point &centroid1, const point &centroid2,
                               xform &alignxf)
 {
-	size_t n = pairs.size();
+	size_t npairs = pairs.size();
 
 	float evec[3][3] = { { 0 } }, einv[3] = { 0 };
 	vec b;
-	for (size_t i = 0; i < n; i++) {
+	for (size_t i = 0; i < npairs; i++) {
 		vec p1 = pairs[i].p1 - centroid1;
 		vec p2 = pairs[i].p2 - centroid2;
-		const vec &n1 = pairs[i].n1;
-		const vec &n2 = pairs[i].n2;
-		vec nn = n1 + n2;
-		float d = (p1 - p2) DOT nn;
+		vec n = 0.5f * (pairs[i].n1 + pairs[i].n2);
+		float d = (p1 - p2) DOT n;
 
 		for (int j = 0; j < 3; j++) {
-			b[j] += d * nn[j];
+			b[j] += d * n[j];
 			for (int k = 0; k < 3; k++)
-				evec[j][k] += nn[j] * nn[k];
+				evec[j][k] += n[j] * n[k];
 		}
 	}
-
-	// Regularization
-	evec[0][0] += REGULARIZATION * n;
-	evec[1][1] += REGULARIZATION * n;
-	evec[2][2] += REGULARIZATION * n;
 
 	// Eigen-decomposition and inverse
 	vec eval;
 	eigdc<float,3>(evec, eval);
 	for (int i = 0; i < 3; i++)
-		einv[i] = 1.0f / eval[i];
+		einv[i] = 1.0f / (eval[i] + REGULARIZATION * eval[2]);
 
 	// Solve system
 	eigmult<float,3>(evec, einv, b);
@@ -489,14 +295,14 @@ static void align_scale(const vector<PtPair> &pairs, xform &alignxf,
                         const point &centroid1, const point &centroid2,
                         bool do_affine)
 {
-	size_t n = pairs.size();
+	size_t npairs = pairs.size();
 
 	point centroid = 0.5f * (centroid1 + alignxf * centroid2);
 
 	// Compute covariance matrices
 	float cov1[3][3] = { { 0 } };
 	float cov2[3][3] = { { 0 } };
-	for (size_t i = 0; i < n; i++) {
+	for (size_t i = 0; i < npairs; i++) {
 		point p1 = pairs[i].p1 - centroid;
 		point p2 = alignxf * pairs[i].p2 - centroid;
 		for (int j = 0; j < 3; j++) {
@@ -537,28 +343,6 @@ static void align_scale(const vector<PtPair> &pairs, xform &alignxf,
 }
 
 
-// Compute point-to-point or point-to-plane squared distances
-static void compute_dist2(const vector<PtPair> &pairs,
-	vector<float> &distances2, ICP_iter_type iter_type)
-{
-	size_t np = pairs.size();
-	distances2.resize(np);
-	if (iter_type == ICP_POINT_TO_POINT) {
-		for (size_t i = 0; i < np; i++)
-			distances2[i] = dist2(pairs[i].p1, pairs[i].p2);
-	} else /* ICP_POINT_TO_PLANE */ {
-		float p2pl_mult = 0.5f / (1.0f + REGULARIZATION);
-		float p2pt_mult = REGULARIZATION / (1.0f + REGULARIZATION);
-		for (size_t i = 0; i < np; i++) {
-			vec v = pairs[i].p1 - pairs[i].p2;
-			distances2[i] = p2pl_mult * (sqr(v DOT pairs[i].n1) +
-				sqr(v DOT pairs[i].n2));
-			distances2[i] += p2pt_mult * len2(v);
-		}
-	}
-}
-
-
 // Find the median of a list of numbers - makes a copy of vals (since it's
 // passed by value, not by reference) so that we can modify it
 static float median(vector<float> vals)
@@ -573,33 +357,17 @@ static float median(vector<float> vals)
 }
 
 
-// Find the mean of a list of numbers
-static float mean(const vector<float> &vals)
-{
-	size_t n = vals.size();
-	if (!n)
-		return 0.0f;
-
-	float sum = 0.0f;
-	for (size_t i = 0; i < n; i++)
-		sum += vals[i];
-
-	return sum / n;
-}
-
-
 // Do one iteration of ICP
 static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
                       const xform &xf1, xform &xf2,
                       const KDtree *kd1, const KDtree *kd2,
                       const vector<float> &weights1, const vector<float> &weights2,
                       vector<float> &sampcdf1, vector<float> &sampcdf2,
-                      float cdfincr, bool update_cdfs,
-                      float dist_thresh_mult, float normdot_thresh,
-                      float &maxdist, int verbose,
-                      ICP_iter_type iter_type, ICP_xform_type xform_type)
+                      int desired_pairs, float &cdfincr, bool update_cdfs,
+                      float &maxdist, float &angle_thresh,
+		      int verbose, ICP_xform_type xform_type)
 {
-	const size_t nv1 = mesh1->vertices.size(), nv2 = mesh2->vertices.size();
+	const int nv1 = mesh1->vertices.size(), nv2 = mesh2->vertices.size();
 
 	// Compute pairs
 	timestamp t1 = now();
@@ -609,11 +377,11 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 	}
 
 	vector<PtPair> pairs;
-	pairs.reserve(DESIRED_PAIRS);
+	pairs.reserve(desired_pairs);
 	select_and_match(mesh1, mesh2, xf1, xf2, kd2, sampcdf1, cdfincr,
-		maxdist, false, pairs);
+		maxdist, angle_thresh, false, pairs);
 	select_and_match(mesh2, mesh1, xf2, xf1, kd1, sampcdf2, cdfincr,
-		maxdist, true, pairs);
+		maxdist, angle_thresh, true, pairs);
 
 	timestamp t2 = now();
 	size_t npairs = pairs.size();
@@ -622,45 +390,34 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 			(unsigned long) npairs, (t2 - t1) * 1000.0f);
 	}
 
-	// Compute median point-to-point or point-to-plane distance.
-	vector<float> distances2;
-	compute_dist2(pairs, distances2, iter_type);
-	float median_dist = sqrt(median(distances2));
-
-	// Now compute threshold for rejection, as a multiple of sigma
-	// (estimated robustly based on the median).
-	float sigma = MEDIAN_TO_SIGMA * median_dist;
-	float dist_thresh = dist_thresh_mult * sigma;
-	float dist_thresh2 = sqr(dist_thresh);
-	
-	// We also compute the new maxdist, but that always has to be
-	// based on point-to-point distances (since that's how the KDtree
-	// interprets maxdist).
-	if (!update_cdfs) {
-		if (iter_type == ICP_POINT_TO_POINT) {
-			maxdist = dist_thresh_mult * sigma;
-		} else {
-			vector<float> distances2_pt2pt;
-			compute_dist2(pairs, distances2_pt2pt, ICP_POINT_TO_POINT);
-			float sigma_pt2pt = MEDIAN_TO_SIGMA * sqrt(median(distances2_pt2pt));
-			maxdist = dist_thresh_mult * sigma_pt2pt;
-		}
+	// Compute median point-to-point distance and angle
+	vector<float> distances2(npairs), normdots(npairs);
+	for (size_t i = 0; i < npairs; i++) {
+		distances2[i] = dist2(pairs[i].p1, pairs[i].p2);
+		normdots[i] = pairs[i].n1 DOT pairs[i].n2;
 	}
+	float median_dist = sqrt(median(distances2));
+	float median_angle = acos(median(normdots));
 
+	// Compute rejection thresholds, which will also serve as
+	// thresholds for the next iteration
+	if (median_dist)
+		maxdist = DIST_THRESH_MULT * median_dist;
+	float dist2_thresh = sqr(maxdist);
+	angle_thresh = clamp(ANGLE_THRESH_MULT * median_angle,
+		ANGLE_THRESH_MIN, ANGLE_THRESH_MAX);
+	float normdot_thresh = cos(angle_thresh);
 
 	// Reject
 	if (verbose > 1)
 		dprintf("Rejecting pairs with dist > %g or angle > %.1f\n",
-			dist_thresh, degrees(acos(normdot_thresh)));
-	float err = 0.0f;
+			maxdist, degrees(angle_thresh));
 	size_t next = 0;
 	for (size_t i = 0; i < npairs; i++) {
-		if (distances2[i] > dist_thresh2)
-			continue;
-		if ((pairs[i].n1 DOT pairs[i].n2) < normdot_thresh)
+		if (distances2[i] > dist2_thresh ||
+		    normdots[i] < normdot_thresh)
 			continue;
 		pairs[next++] = pairs[i];
-		err += distances2[i];
 	}
 	pairs.erase(pairs.begin() + next, pairs.end());
 
@@ -677,12 +434,7 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 			dprintf("Too few point pairs.\n");
 		return -1.0f;
 	}
-
-	err = sqrt(err / npairs);
-	const char *dist_type = (iter_type == ICP_POINT_TO_POINT) ?
-		"point-to-point" : "point-to-plane";
-	if (verbose > 1)
-		dprintf("RMS %s error before alignment = %g\n", dist_type, err);
+	cdfincr *= (float) npairs / desired_pairs;
 
 	// Compute centroids and scale
 	point centroid1, centroid2;
@@ -702,24 +454,12 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 	scale = 1.0f / scale;
 
 	// Do the minimization
-	float evec[6][6] = { { 0 } }, einv[6] = { 0 };
 	xform alignxf;
 	if (xform_type == ICP_TRANSLATION) {
-		if (iter_type == ICP_POINT_TO_POINT) {
-			alignxf = xform::trans(centroid1 - centroid2);
-		} else {
-			align_pt2pl_trans(pairs, centroid1, centroid2, alignxf);
-		}
-		update_cdfs = false;
+		align_pt2pl_trans(pairs, centroid1, centroid2, alignxf);
 	} else {
 		// First do rigid-body alignment
-		if (iter_type == ICP_POINT_TO_POINT) {
-			align_pt2pt(pairs, centroid1, centroid2, alignxf);
-			update_cdfs = false;
-		} else {
-			align_pt2pl(pairs, scale, centroid1, centroid2,
-			            evec, einv, alignxf);
-		}
+		align_symm(pairs, scale, centroid1, centroid2, median_dist, alignxf);
 		// ... and then estimate the scale on top of that, if required
 		if (xform_type == ICP_SIMILARITY)
 			align_scale(pairs, alignxf, centroid1, centroid2, false);
@@ -732,66 +472,95 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 	if (xform_type == ICP_RIGID)
 		orthogonalize(xf2);
 	xform nalignxf = norm_xf(alignxf);
+
+	float err = 0.0f;
 	for (size_t i = 0; i < npairs; i++) {
-		pairs[i].p2 = alignxf * pairs[i].p2;
-		pairs[i].n2 = nalignxf * pairs[i].n2;
+		vec n = normalized(pairs[i].n1 + nalignxf * pairs[i].n2);
+		err += sqr((pairs[i].p1 - pairs[i].p2) DOT n);
 	}
-	compute_dist2(pairs, distances2, iter_type);
-	err = sqrt(mean(distances2));
+	err = sqrt(err / npairs);
 
 	timestamp t4 = now();
 	if (verbose > 1) {
 		dprintf("Computed xform in %.3f msec.\n",
 			(t4 - t3) * 1000.0f);
-		dprintf("RMS %s error after alignment = %g\n\n", dist_type, err);
+		dprintf("RMS error after alignment = %g\n\n", err);
 	}
 
 	// See if we need to update CDFs
 	if (!update_cdfs)
 		return err;
 
-	centroid2 = alignxf * centroid2;
-	xform nxf1 = norm_xf(xf1), nxf2 = norm_xf(xf2);
+	// Construct CDFs based on inverse covariance of normals
+	float A1[3][3] = { { 0 } }, A2[3][3] = { { 0 } };
+#pragma omp parallel
+	{
+#pragma omp for nowait
+		for (int i = 0; i < nv1; i++) {
+			if (!weights1[i])
+				continue;
+			for (int j = 0; j < 3; j++)
+				for (int k = j; k < 3; k++)
+					A1[j][k] += mesh1->normals[i][j] *
+					            mesh1->normals[i][k];
+		}
+#pragma omp for
+		for (int i = 0; i < nv2; i++) {
+			if (!weights2[i])
+				continue;
+			for (int j = 0; j < 3; j++)
+				for (int k = j; k < 3; k++)
+					A2[j][k] += mesh2->normals[i][j] *
+					            mesh2->normals[i][k];
+		}
+	} // omp parallel
+
+	for (int j = 1; j < 3; j++) {
+		for (int k = 0; k < j; k++) {
+			A1[j][k] = A1[k][j];
+			A2[j][k] = A2[k][j];
+		}
+	}
+
+	float eval1[3], eval2[3];
+	eigdc<float,3>(A1, eval1);
+	eigdc<float,3>(A2, eval2);
+	for (int i = 0; i < 3; i++) {
+		eval1[i] = 1.0f / (eval1[i] + REGULARIZATION * eval1[2]);
+		eval2[i] = 1.0f / (eval2[i] + REGULARIZATION * eval2[2]);
+	}
+
 	double sum_sampcdf1 = 0, sum_sampcdf2 = 0;
 #pragma omp parallel
 	{
-#pragma omp for nowait reduction(+ : sum_sampcdf1)
-		for (ssize_t i = 0; i < nv1; i++) {
+#pragma omp parallel for reduction(+ : sum_sampcdf1)
+		for (int i = 0; i < nv1; i++) {
 			if (!weights1[i]) {
 				sampcdf1[i] = 0.0;
 				continue;
 			}
-			point p = scale * (xf1 * mesh1->vertices[i] - centroid1);
-			vec n = nxf1 * mesh1->normals[i];
-			vec c = p CROSS n;
 			float s = 0.0f;
-			for (int j = 0; j < 6; j++) {
-				float tmp = evec[0][j] * c[0] + evec[1][j] * c[1] +
-				            evec[2][j] * c[2] + evec[3][j] * n[0] +
-				            evec[4][j] * n[1] + evec[5][j] * n[2];
-				// Compromise between uniform and inverse
-				// eigenvalue-directed sampling - sqrt
-				s += sqrt(einv[j]) * sqr(tmp);
-			}
+			for (int j = 0; j < 3; j++)
+				s += eval1[j] * sqr(
+					A1[0][j] * mesh1->normals[i][0] +
+					A1[1][j] * mesh1->normals[i][1] +
+					A1[2][j] * mesh1->normals[i][2]);
 			sum_sampcdf1 += (sampcdf1[i] = s * weights1[i]);
 		}
 
-#pragma omp for reduction(+ : sum_sampcdf2)
-		for (ssize_t i = 0; i < nv2; i++) {
+
+#pragma omp parallel for reduction(+ : sum_sampcdf2)
+		for (int i = 0; i < nv2; i++) {
 			if (!weights2[i]) {
 				sampcdf2[i] = 0.0;
 				continue;
 			}
-			point p = scale * (xf2 * mesh2->vertices[i] - centroid2);
-			vec n = nxf2 * mesh2->normals[i];
-			vec c = p CROSS n;
 			float s = 0.0f;
-			for (int j = 0; j < 6; j++) {
-				float tmp = evec[0][j] * c[0] + evec[1][j] * c[1] +
-				            evec[2][j] * c[2] + evec[3][j] * n[0] +
-				            evec[4][j] * n[1] + evec[5][j] * n[2];
-				s += sqrt(einv[j]) * sqr(tmp);
-			}
+			for (int j = 0; j < 3; j++)
+				s += eval2[j] * sqr(
+					A2[0][j] * mesh2->normals[i][0] +
+					A2[1][j] * mesh2->normals[i][1] +
+					A2[2][j] * mesh2->normals[i][2]);
 			sum_sampcdf2 += (sampcdf2[i] = s * weights2[i]);
 		}
 	} // omp parallel
@@ -804,13 +573,13 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 
 	float cdf_scale1 = 1 / sum_sampcdf1;
 	sampcdf1[0] *= cdf_scale1;
-	for (size_t i = 1; i < nv1 - 1; i++)
+	for (int i = 1; i < nv1 - 1; i++)
 		sampcdf1[i] = cdf_scale1 * sampcdf1[i] + sampcdf1[i-1];
 	sampcdf1[nv1-1] = 1.0f;
 
 	float cdf_scale2 = 1 / sum_sampcdf2;
 	sampcdf2[0] *= cdf_scale2;
-	for (size_t i = 1; i < nv2 - 1; i++)
+	for (int i = 1; i < nv2 - 1; i++)
 		sampcdf2[i] = cdf_scale2 * sampcdf2[i] + sampcdf2[i-1];
 	sampcdf2[nv2-1] = 1.0f;
 
@@ -829,7 +598,7 @@ static void make_uniform_cdfs(
 	const vector<float> &weights1, vector<float> &sampcdf1,
 	const vector<float> &weights2, vector<float> &sampcdf2)
 {
-	const size_t nv1 = weights1.size(), nv2 = weights2.size();
+	const int nv1 = weights1.size(), nv2 = weights2.size();
 	sampcdf1.resize(nv1);
 	sampcdf2.resize(nv2);
 
@@ -837,22 +606,22 @@ static void make_uniform_cdfs(
 #pragma omp parallel
 	{
 #pragma omp for nowait reduction(+ : sum_sampcdf1)
-		for (ssize_t i = 0; i < nv1; i++)
+		for (int i = 0; i < nv1; i++)
 			sum_sampcdf1 += (sampcdf1[i] = weights1[i]);
 #pragma omp for reduction(+ : sum_sampcdf2)
-		for (ssize_t i = 0; i < nv2; i++)
+		for (int i = 0; i < nv2; i++)
 			sum_sampcdf2 += (sampcdf2[i] = weights2[i]);
 	}
 
 	float cdf_scale1 = 1 / sum_sampcdf1;
 	sampcdf1[0] *= cdf_scale1;
-	for (size_t i = 1; i < nv1 - 1; i++)
+	for (int i = 1; i < nv1 - 1; i++)
 		sampcdf1[i] = cdf_scale1 * sampcdf1[i] + sampcdf1[i-1];
 	sampcdf1[nv1-1] = 1.0f;
 
 	float cdf_scale2 = 1 / sum_sampcdf2;
 	sampcdf2[0] *= cdf_scale2;
-	for (size_t i = 1; i < nv2 - 1; i++)
+	for (int i = 1; i < nv2 - 1; i++)
 		sampcdf2[i] = cdf_scale2 * sampcdf2[i] + sampcdf2[i-1];
 	sampcdf2[nv2-1] = 1.0f;
 }
@@ -869,107 +638,83 @@ float ICP(TriMesh *mesh1, TriMesh *mesh2,
 {
 	timestamp t_start = now();
 
-	// Precompute normals, connectivity (used to determine boundaries),
-	// and grids (used for fast overlap computation)
-	Grid *g1, *g2;
-#pragma omp parallel for
-	for (int i = 0; i < 2; i++) {
-		TriMesh *mesh = (i == 0) ? mesh1 : mesh2;
-		Grid * &g = (i == 0) ? g1 : g2;
-
-		mesh->need_normals();
-		if (REJECT_BDY) {
-			mesh->need_faces();
-			mesh->need_neighbors();
-			mesh->need_adjacentfaces();
-		}
-		g = new Grid(mesh->vertices);
+	// Precompute normals and connectivity (used to determine boundaries)
+	mesh1->need_normals();
+	mesh2->need_normals();
+	if (REJECT_BDY) {
+		mesh1->need_faces();
+		mesh1->need_neighbors();
+		mesh1->need_adjacentfaces();
+		mesh2->need_faces();
+		mesh2->need_neighbors();
+		mesh2->need_adjacentfaces();
 	}
 
-	// Initial maxdist, thresholds
-	if (maxdist <= 0.0f)
-		maxdist = min(g1->bbox_size(), g2->bbox_size());
-	float dist_thresh_mult = DIST_THRESH_MULT_START;
-	float normdot_thresh = NORMDOT_THRESH_START;
+	// Initial distance and angle thresholds
+	if (maxdist <= 0.0f) {
+		mesh1->need_bsphere();
+		mesh2->need_bsphere();
+		maxdist = dist(xf1 * mesh1->bsphere.center,
+		               xf2 * mesh2->bsphere.center);
+		maxdist += mesh1->bsphere.r + mesh2->bsphere.r;
+	}
+	float angle_thresh = ANGLE_THRESH_MAX;
 
 	// Weights and initial (uniform) CDFs
 	const size_t nv1 = mesh1->vertices.size(), nv2 = mesh2->vertices.size();
 	bool had_weights = (weights1.size() == nv1 && weights2.size() == nv2);
-	weights1.resize(nv1, 1.0f);
-	weights2.resize(nv2, 1.0f);
+	if (!had_weights) {
+		weights1.resize(nv1, 1.0f);
+		weights2.resize(nv2, 1.0f);
+	}
 
 	vector<float> sampcdf1, sampcdf2;
 	make_uniform_cdfs(weights1, sampcdf1, weights2, sampcdf2);
 	float cdfincr = 2.0f / DESIRED_PAIRS;
 
-	timestamp t_initial_iters = now();
+	timestamp t_iters = now();
 	if (verbose > 1) {
 		dprintf("\nTime for preprocessing: %.3f msec.\n\n",
-			(t_initial_iters - t_start) * 1000.0f);
+			(t_iters - t_start) * 1000.0f);
 	}
 
-	// First, do a few point-to-point iterations for stability in case the
-	// initial misalignment is big.
+	// Now the main ICP iterations
 	ICP_xform_type iter_xform_type =
 		(xform_type == ICP_TRANSLATION) ? ICP_TRANSLATION : ICP_RIGID;
-	float err;
-	for (int iter = 0; iter < INITIAL_ITERS; iter++) {
-		err = ICP_iter(mesh1, mesh2, xf1, xf2, kd1, kd2,
-		               weights1, weights2, sampcdf1, sampcdf2,
-		               cdfincr, false, dist_thresh_mult,
-		               normdot_thresh, maxdist, verbose,
-		               ICP_POINT_TO_POINT, iter_xform_type);
-		if (err < 0) {
-			delete g1;
-			delete g2;
-			if (!had_weights) {
-				weights1.clear();
-				weights2.clear();
-			}
-			return err;
-		}
-	}
-
-	timestamp t_main_iters = now();
-	if (verbose > 1) {
-		dprintf("Time for initial iterations: %.3f msec.\n\n",
-		       (t_main_iters - t_initial_iters) * 1000.0f);
-	}
-
-	// Now the real (point-to-plane) iterations
-	float min_err = 0.0f;
+	float err, min_err = 0.0f;
 	int iter_of_min_err = -1;
 	int iter;
 	for (iter = 0; iter < MAX_ITERS; iter++) {
-		// Update thresholds
-		dist_thresh_mult = mix(dist_thresh_mult, DIST_THRESH_MULT_FINAL,
-			THRESH_RATE_OF_CHANGE);
-		normdot_thresh = mix(normdot_thresh, NORMDOT_THRESH_FINAL,
-			THRESH_RATE_OF_CHANGE);
-
 		// Should we recompute overlaps and CDFs?
-		bool recompute = ((iter % CDF_UPDATE_INTERVAL) == 0);
-		if (!had_weights && recompute && iter != 0)
-			compute_overlaps(mesh1, mesh2, xf1, xf2,
-			                 NULL, NULL, g1, g2,
-			                 weights1, weights2,
-			                 maxdist, verbose);
+		// The below uses the constant "2" so that we don't compute
+		// overlaps until we have a few iterations under our belt,
+		// in case things started out really far away.
+		bool recompute = ((iter % CDF_UPDATE_INTERVAL) == 2);
 
-		// If we're recomputing CDFs, use uniform sampling on this
-		// iteration to make sure that covariance is unbiased
-		if (recompute && iter != 0)
+		if (recompute) {
+			if (!had_weights) {
+				compute_overlaps(mesh1, mesh2, xf1, xf2,
+						 kd1, kd2,
+						 weights1, weights2,
+						 maxdist, verbose);
+			}
+
+			// If we're recomputing CDFs, use uniform sampling
+			// on this iteration to make sure that covariance
+			// is unbiased.
 			make_uniform_cdfs(weights1, sampcdf1,
 			                  weights2, sampcdf2);
+		}
 
 		// Do an iteration
 		err = ICP_iter(mesh1, mesh2, xf1, xf2, kd1, kd2,
 		               weights1, weights2, sampcdf1, sampcdf2,
-		               cdfincr, recompute, dist_thresh_mult,
-		               normdot_thresh, maxdist, verbose,
-		               ICP_POINT_TO_PLANE, iter_xform_type);
+			       DESIRED_PAIRS, cdfincr, recompute,
+			       maxdist, angle_thresh,
+			       verbose, iter_xform_type);
+
+		// Check resulting error
 		if (err < 0) {
-			delete g1;
-			delete g2;
 			if (!had_weights) {
 				weights1.clear();
 				weights2.clear();
@@ -1001,7 +746,7 @@ float ICP(TriMesh *mesh1, TriMesh *mesh2,
 	// Some final iterations at a higher sampling rate...
 	if (verbose > 1) {
 		dprintf("Time for %d iterations: %.3f msec.\n\n",
-			iter, (now() - t_main_iters) * 1000.0f);
+			iter, (now() - t_iters) * 1000.0f);
 	}
 
 	for (iter = 0; iter < FINAL_ITERS; iter++) {
@@ -1011,14 +756,13 @@ float ICP(TriMesh *mesh1, TriMesh *mesh2,
 			// we return is unbiased
 			make_uniform_cdfs(weights1, sampcdf1, weights2, sampcdf2);
 		}
+		maxdist *= DIST_THRESH_MULT_FINAL / DIST_THRESH_MULT;
 		err = ICP_iter(mesh1, mesh2, xf1, xf2, kd1, kd2,
 		               weights1, weights2, sampcdf1, sampcdf2,
-		               cdfincr, false, DIST_THRESH_MULT_FINAL,
-		               NORMDOT_THRESH_FINAL, maxdist, verbose,
-		               ICP_POINT_TO_PLANE, iter_xform_type);
+			       DESIRED_PAIRS_FINAL, cdfincr, false,
+			       maxdist, angle_thresh,
+			       verbose, iter_xform_type);
 		if (err < 0) {
-			delete g1;
-			delete g2;
 			if (!had_weights) {
 				weights1.clear();
 				weights2.clear();
@@ -1034,8 +778,6 @@ float ICP(TriMesh *mesh1, TriMesh *mesh2,
 		       (now() - t_start) * 1000.0f);
 	}
 
-	delete g1;
-	delete g2;
 	if (!had_weights) {
 		weights1.clear();
 		weights2.clear();

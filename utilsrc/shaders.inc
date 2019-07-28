@@ -9,12 +9,30 @@ GLSL shaders for mesh_view
 */
 
 
+#ifndef GL_VERTEX_PROGRAM_POINT_SIZE
+#define GL_VERTEX_PROGRAM_POINT_SIZE 0x8642
+#endif
+
+
 // Unlit - just pass through gl_Color
 const char unlit_vert[] = shader_text(
 	varying vec4 color;
 	void main()
 	{
 		gl_Position = ftransform();
+		color = gl_Color;
+	}
+);
+
+const char unlit_point_vert[] = shader_text(
+	uniform float pointscale;
+	varying vec4 color;
+	void main()
+	{
+		gl_Position = ftransform();
+		vec4 worldPos = gl_ModelViewMatrix * gl_Vertex;
+		float z = -worldPos.z / worldPos.w;
+		gl_PointSize = max(1.0, pointscale / z);
 		color = gl_Color;
 	}
 );
@@ -35,6 +53,21 @@ const char phong_vert[] = shader_text(
 	void main()
 	{
 		gl_Position = ftransform();
+		norm = (gl_NormalMatrix * gl_Normal).xyz;
+		color = gl_Color;
+	}
+);
+
+const char phong_point_vert[] = shader_text(
+	uniform float pointscale;
+	varying vec3 norm;
+	varying vec4 color;
+	void main()
+	{
+		gl_Position = ftransform();
+		vec4 worldPos = gl_ModelViewMatrix * gl_Vertex;
+		float z = -worldPos.z / worldPos.w;
+		gl_PointSize = max(1.0, pointscale / z);
 		norm = (gl_NormalMatrix * gl_Normal).xyz;
 		color = gl_Color;
 	}

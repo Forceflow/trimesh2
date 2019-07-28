@@ -229,7 +229,7 @@ static inline T fract(const T &x)
 template <class T, class A, class B>
 static inline T clamp(const T &x, const A &a, const B &b)
 {
-	return (x > a) ? (x < b) ? x : T(b) : T(a);  // returns a if x is NaN
+	return (x > T(a)) ? (x < T(b)) ? x : T(b) : T(a);  // returns a if x is NaN
 }
 
 template <class T, class A>
@@ -241,7 +241,7 @@ static inline T mix(const T &x, const T &y, const A &a)
 template <class T, class A>
 static inline T step(const A &a, const T &x)
 {
-	return (x < a) ? T(0) : T(1);
+	return (x < T(a)) ? T(0) : T(1);
 }
 
 template <class T, class A, class B>
@@ -256,16 +256,19 @@ static inline T smoothstep(const A &a, const B &b, const T &x)
 
 // Fast, portable pseudorandom number generator using Marsaglia's xorshift.
 // Returns random unsigned int.  Pass in 0 to reset.
-static inline unsigned xorshift_rnd(unsigned n = 1)
+static inline unsigned xorshift_rnd(unsigned n = ~0u)
 {
 	static unsigned x = 2463534242u;
-	if (unlikely(!n)) {
-		x = 2463534242u;
-		return 0;
+	if (likely(n == ~0u)) {
+		x ^= x << 13;
+		x ^= x >> 17;
+		x ^= x << 5;
+		return x;
 	}
-	x ^= x << 13;
-	x ^= x >> 17;
-	x ^= x << 5;
+	if (!n)
+		x = 2463534242u;
+	else
+		x = n;
 	return x;
 }
 

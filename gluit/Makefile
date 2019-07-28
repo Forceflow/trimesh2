@@ -3,7 +3,7 @@ INCLUDES = -I../include -I../include/GL
 
 include ../Makerules
 
-COPTS += -Wno-unused-parameter -Wno-shadow
+COPTS += -Wno-unused-parameter -Wno-shadow -Wno-implicit-fallthrough -Wno-cast-function-type -Wno-restrict -Wno-stringop-truncation
 
 ifdef DONT_BUILD_FREEGLUT
 CFILES =

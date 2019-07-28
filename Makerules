@@ -47,6 +47,9 @@ else
 		ifeq ($(ARCH),x86_64)
 			UNAME := Linux64
 		endif
+		ifeq ($(ARCH),aarch64)
+			UNAME := Linux64
+		endif
 	endif
 	ifeq ($(UNAME),Darwin)
 		IS64 := $(shell sysctl -n hw.cpu64bit_capable)

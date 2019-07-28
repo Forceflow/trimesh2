@@ -32,6 +32,8 @@ static point loop(TriMesh *mesh, int /* f1 */, int /* f2 */,
 static point opposite(TriMesh *mesh, int f, int v)
 {
 	int ind = mesh->faces[f].indexof(v);
+	if (unlikely(ind < 0)) // Shut up compiler warning
+		return point();
 	int ae = mesh->across_edge[f][ind];
 	if (ae >= 0) {
 		int j = mesh->faces[ae].indexof(mesh->faces[f][NEXT_MOD3(ind)]);

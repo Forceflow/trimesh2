@@ -54,21 +54,52 @@ public:
 	// Destructor - frees the whole tree
 	~KDtree();
 
-	// The queries: returns closest point to a point or a ray,
-	// provided it's within sqrt(maxdist2) and is compatible
+	// Returns closest point to a given point p,
+	// provided it's within sqrt(maxdist2) and is compatible.
+	// If an approximation epsilon is provided, the queries will
+	// return a point within a factor of (1+eps) of the closest.
 	const float *closest_to_pt(const float *p,
 	                           float maxdist2 = 0.0f,
-	                           const CompatFunc *iscompat = NULL) const;
+	                           const CompatFunc *iscompat = NULL,
+				   float approx_eps = 0.0f) const;
+
+	// Shorthand with approx_eps but no iscompat
+	const float *closest_to_pt(const float *p,
+	                           float maxdist2,
+				   float approx_eps) const
+		{ return closest_to_pt(p, maxdist2, NULL, approx_eps); }
+
+
+	// Returns closest point to a ray through p in direction dir
 	const float *closest_to_ray(const float *p, const float *dir,
 	                            float maxdist2 = 0.0f,
-	                            const CompatFunc *iscompat = NULL) const;
+	                            const CompatFunc *iscompat = NULL,
+				    float approx_eps = 0.0f) const;
 
-	// Find the k nearest neighbors
+	// Shorthand with approx_eps but no iscompat
+	const float *closest_to_ray(const float *p, const float *dir,
+	                            float maxdist2,
+				    float approx_eps) const
+		{ return closest_to_ray(p, dir, maxdist2, NULL, approx_eps); }
+
+	// Find the k nearest neighbors to p, filling in knn array
 	void find_k_closest_to_pt(::std::vector<const float *> &knn,
 	                          int k,
 	                          const float *p,
 	                          float maxdist2 = 0.0f,
-	                          const CompatFunc *iscompat = NULL) const;
+	                          const CompatFunc *iscompat = NULL,
+				  float approx_eps = 0.0f) const;
+
+	// Shorthand with approx_eps but no iscompat
+	void find_k_closest_to_pt(::std::vector<const float *> &knn,
+	                          int k,
+	                          const float *p,
+	                          float maxdist2,
+				  float approx_eps) const
+		{ return find_k_closest_to_pt(knn, k, p, maxdist2, NULL, approx_eps); }
+
+	// Is there a point within a given distance of a query?
+	bool exists_pt_within(const float *p, float maxdist) const;
 };
 
 } // namespace trimesh

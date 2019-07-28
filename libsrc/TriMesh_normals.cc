@@ -166,12 +166,13 @@ static void normals_from_points(vector<point> &vertices, vector<vec> &normals)
 {
 	const int k = 6;
 	const vec ref(0, 0, 1);
+	const float approx_eps = 0.05f;
 	KDtree kd(vertices);
 	int nv = vertices.size();
 #pragma omp parallel for
 	for (int i = 0; i < nv; i++) {
 		vector<const float *> knn;
-		kd.find_k_closest_to_pt(knn, k, vertices[i]);
+		kd.find_k_closest_to_pt(knn, k, vertices[i], approx_eps);
 		int actual_k = knn.size();
 		if (actual_k < 3) {
 			TriMesh::dprintf("Warning: not enough points for vertex %d\n", i);

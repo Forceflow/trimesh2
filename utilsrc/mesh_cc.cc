@@ -9,6 +9,10 @@ out only selected components of the object.
 Does the same thing as "plycomps", part of the plytools package by Greg Turk.
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "TriMesh.h"
 #include "TriMesh_algo.h"
 #ifdef _WIN32

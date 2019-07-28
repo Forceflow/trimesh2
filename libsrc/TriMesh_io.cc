@@ -4,8 +4,8 @@ Princeton University
 
 TriMesh_io.cc
 Input and output of triangle meshes
-Can read: PLY (triangle mesh and range grid), OFF, OBJ, RAY, SM, 3DS, VVD, STL
-Can write: PLY (triangle mesh and range grid), OFF, OBJ, RAY, SM, STL, C++, DAE
+Can read: PLY (triangle mesh, range grid), OFF, OBJ, RAY, SM, 3DS, VVD, STL, PTS
+Can write: PLY (triangle mesh, range grid), OFF, OBJ, RAY, SM, STL, PTS, C++, DAE
 */
 
 #include "TriMesh.h"
@@ -40,8 +40,9 @@ static bool read_vvd(FILE *f, TriMesh *mesh);
 static bool read_ray(FILE *f, TriMesh *mesh);
 static bool read_obj(FILE *f, TriMesh *mesh);
 static bool read_off(FILE *f, TriMesh *mesh);
-static bool read_sm( FILE *f, TriMesh *mesh);
-static bool read_stl( FILE *f, TriMesh *mesh);
+static bool read_sm (FILE *f, TriMesh *mesh);
+static bool read_stl(FILE *f, TriMesh *mesh);
+static bool read_pts(FILE *f, TriMesh *mesh);
 
 static bool read_verts_bin(FILE *f, TriMesh *mesh, bool &need_swap,
 	int nverts, int vert_len, int vert_pos, int vert_norm,
@@ -77,6 +78,7 @@ static bool write_obj(TriMesh *mesh, FILE *f, bool write_norm);
 static bool write_off(TriMesh *mesh, FILE *f);
 static bool write_sm(TriMesh *mesh, FILE *f);
 static bool write_stl(TriMesh *mesh, FILE *f);
+static bool write_pts(TriMesh *mesh, FILE *f);
 static bool write_cc(TriMesh *mesh, FILE *f, const char *filename,
 	bool write_norm, bool float_color);
 static bool write_dae(TriMesh *mesh, FILE *f);
@@ -140,8 +142,8 @@ TriMesh *TriMesh::read(const char *filename)
 
 // Actually read a mesh.  Tries to figure out type of file from first
 // few bytes.  Filename can be "-" for stdin.
-// STL doesn't have a magic number, nor any other way of recognizing it.
-// Recognize file.stl and stl:- constructions.
+// STL and PTS don't have magic numbers, so we recognize file.stl and stl:-
+// (and same for pts) constructions.
 bool TriMesh::read_helper(const char *filename, TriMesh *mesh)
 {
 	if (!filename || *filename == '\0')
@@ -170,6 +172,12 @@ bool TriMesh::read_helper(const char *filename, TriMesh *mesh)
 	// STL
 	if (begins_with(filename, "stl:-") || ends_with(filename, ".stl")) {
 		ok = read_stl(f, mesh);
+		goto out;
+	}
+
+	// PTS
+	if (begins_with(filename, "pts:-") || ends_with(filename, ".pts")) {
+		ok = read_pts(f, mesh);
 		goto out;
 	}
 
@@ -775,6 +783,27 @@ static bool read_stl(FILE *f, TriMesh *mesh)
 }
 
 
+// Read an ASCII file of points
+static bool read_pts(FILE *f, TriMesh *mesh)
+{
+	while (!feof(f)) {
+		char buf[1024];
+		if (!fgets(buf, 1024, f))
+			break;
+		float x, y, z, nx, ny, nz;
+		int nparsed = sscanf(buf, "%f %f %f %f %f %f",
+			&x, &y, &z, &nx, &ny, &nz);
+		if (nparsed >= 3)
+			mesh->vertices.push_back(point(x,y,z));
+		if (nparsed == 6)
+			mesh->normals.push_back(vec(nx,ny,nz));
+	}
+	if (mesh->normals.size() != mesh->vertices.size())
+		mesh->normals.clear();
+	return true;
+}
+
+
 // Read nverts vertices from a binary file.
 // vert_len = total length of a vertex record in bytes
 // vert_pos, vert_norm, vert_color, vert_conf =
@@ -1339,7 +1368,7 @@ bool TriMesh::write(const char *filename)
 	}
 
 	enum { PLY_ASCII, PLY_BINARY_BE, PLY_BINARY_LE,
-	       RAY, OBJ, OFF, SM, STL, CC, DAE } filetype;
+	       RAY, OBJ, OFF, SM, STL, PTS, CC, DAE } filetype;
 	// Set default file type to be native-endian binary ply
 	filetype = we_are_little_endian() ? PLY_BINARY_LE : PLY_BINARY_BE;
 
@@ -1361,6 +1390,8 @@ bool TriMesh::write(const char *filename)
 		filetype = SM;
 	else if (ends_with(filename, ".stl"))
 		filetype = STL;
+	else if (ends_with(filename, ".pts"))
+		filetype = PTS;
 	else if (ends_with(filename, ".cc"))
 		filetype = CC;
 	else if (ends_with(filename, ".c++"))
@@ -1432,6 +1463,9 @@ bool TriMesh::write(const char *filename)
 		} else if (begins_with(filename, "stl:")) {
 			filename += 4;
 			filetype = STL;
+		} else if (begins_with(filename, "pts:")) {
+			filename += 4;
+			filetype = PTS;
 		} else if (begins_with(filename, "cc:")) {
 			filename += 3;
 			filetype = CC;
@@ -1487,6 +1521,9 @@ bool TriMesh::write(const char *filename)
 			break;
 		case STL:
 			ok = write_stl(this, f);
+			break;
+		case PTS:
+			ok = write_pts(this, f);
 			break;
 		case CC:
 			ok = write_cc(this, f, filename, write_norm, float_color);
@@ -1748,6 +1785,20 @@ static bool write_stl(TriMesh *mesh, FILE *f)
 		FWRITE(fbuf, 48, 1, f);
 		unsigned char att[2] = { 0, 0 };
 		FWRITE(att, 2, 1, f);
+	}
+	return true;
+}
+
+
+// Write an ASCII file of points
+static bool write_pts(TriMesh *mesh, FILE *f)
+{
+	mesh->need_normals();
+	for (size_t i = 0; i < mesh->vertices.size(); i++) {
+		fprintf(f, "%f %f %f %f %f %f\n",
+			mesh->vertices[i][0], mesh->vertices[i][1],
+			mesh->vertices[i][2], mesh->normals[i][0],
+			mesh->normals[i][1], mesh->normals[i][2]);
 	}
 	return true;
 }
