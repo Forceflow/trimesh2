@@ -1,4 +1,4 @@
-# TriMesh2 (v2.14)
+# TriMesh2 (v2.15)
 [![Build Status](https://travis-ci.org/Forceflow/trimesh2.svg?branch=master)](https://travis-ci.org/Forceflow/trimesh2) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A C++ library and set of utilities for input, output, and basic manipulation of 3D triangle meshes.
