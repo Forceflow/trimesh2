@@ -47,8 +47,7 @@ struct PtPair {
 };
 
 
-// A class for evaluating compatibility of normals during KDtree searches.
-// This is a simplified version that just checks for positive dot product.
+// A class for evaluating compatibility of normals during KDtree searches
 class NormCompat : public KDtree::CompatFunc {
 private:
 	TriMesh *m;
@@ -68,7 +67,7 @@ public:
 
 
 // Determine which points on mesh1 and mesh2 overlap the other,
-// filling in o1 and o2.
+// filling in o1 and o2
 void compute_overlaps(TriMesh *mesh1, TriMesh *mesh2,
                       const xform &xf1, const xform &xf2,
                       const KDtree *kd1, const KDtree *kd2,
