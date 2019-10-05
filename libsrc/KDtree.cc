@@ -326,13 +326,13 @@ void KDtree::Node::find_closest_compat_to_pt(KDtree::Node::Traversal_Info &ti) c
 
 	float myd = node.center[node.splitaxis] - ti.p[node.splitaxis];
 	if (myd >= 0.0f) {
-		node.child1->find_closest_to_pt(ti);
+		node.child1->find_closest_compat_to_pt(ti);
 		if (myd < ti.closest_d)
-			node.child2->find_closest_to_pt(ti);
+			node.child2->find_closest_compat_to_pt(ti);
 	} else {
-		node.child2->find_closest_to_pt(ti);
+		node.child2->find_closest_compat_to_pt(ti);
 		if (-myd < ti.closest_d)
-			node.child1->find_closest_to_pt(ti);
+			node.child1->find_closest_compat_to_pt(ti);
 	}
 }
 
@@ -395,11 +395,11 @@ void KDtree::Node::find_closest_compat_to_ray(KDtree::Node::Traversal_Info &ti) 
 		return;
 
 	if (ti.p[node.splitaxis] < node.center[node.splitaxis] ) {
-		node.child1->find_closest_to_ray(ti);
-		node.child2->find_closest_to_ray(ti);
+		node.child1->find_closest_compat_to_ray(ti);
+		node.child2->find_closest_compat_to_ray(ti);
 	} else {
-		node.child2->find_closest_to_ray(ti);
-		node.child1->find_closest_to_ray(ti);
+		node.child2->find_closest_compat_to_ray(ti);
+		node.child1->find_closest_compat_to_ray(ti);
 	}
 }
 
@@ -480,13 +480,13 @@ void KDtree::Node::find_k_closest_compat_to_pt(KDtree::Node::Traversal_Info &ti)
 
 	float myd = node.center[node.splitaxis] - ti.p[node.splitaxis];
 	if (myd >= 0.0f) {
-		node.child1->find_k_closest_to_pt(ti);
+		node.child1->find_k_closest_compat_to_pt(ti);
 		if (myd < ti.closest_d || ti.knn.size() != ti.k)
-			node.child2->find_k_closest_to_pt(ti);
+			node.child2->find_k_closest_compat_to_pt(ti);
 	} else {
-		node.child2->find_k_closest_to_pt(ti);
+		node.child2->find_k_closest_compat_to_pt(ti);
 		if (-myd < ti.closest_d || ti.knn.size() != ti.k)
-			node.child1->find_k_closest_to_pt(ti);
+			node.child1->find_k_closest_compat_to_pt(ti);
 	}
 }
 
