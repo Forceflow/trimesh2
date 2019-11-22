@@ -1,4 +1,4 @@
-dist: trusty
+dist: bionic
 language: cpp
 compiler: gcc
 before_install:
