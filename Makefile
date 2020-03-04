@@ -8,7 +8,7 @@ debug:
 	$(MAKE) -C gluit DEBUG=y
 	$(MAKE) -C utilsrc DEBUG=y
 
-FINDCMD = find trimesh2 -name 'OBJ*' -prune -o -name .svn -prune -o -type f -print
+FINDCMD = find trimesh2 -name 'OBJ*' -prune -o -name '.git*' -prune -o -type f -print
 
 tar:
 	cd .. && tar zcvf trimesh2.tar.gz `$(FINDCMD) | sort`
