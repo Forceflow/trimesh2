@@ -492,27 +492,22 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 
 	// Construct CDFs based on inverse covariance of normals
 	float A1[3][3] = { { 0 } }, A2[3][3] = { { 0 } };
-#pragma omp parallel
-	{
-#pragma omp for nowait
-		for (int i = 0; i < nv1; i++) {
-			if (!weights1[i])
-				continue;
-			for (int j = 0; j < 3; j++)
-				for (int k = j; k < 3; k++)
-					A1[j][k] += mesh1->normals[i][j] *
-					            mesh1->normals[i][k];
-		}
-#pragma omp for
-		for (int i = 0; i < nv2; i++) {
-			if (!weights2[i])
-				continue;
-			for (int j = 0; j < 3; j++)
-				for (int k = j; k < 3; k++)
-					A2[j][k] += mesh2->normals[i][j] *
-					            mesh2->normals[i][k];
-		}
-	} // omp parallel
+	for (int i = 0; i < nv1; i++) {
+		if (!weights1[i])
+			continue;
+		for (int j = 0; j < 3; j++)
+			for (int k = j; k < 3; k++)
+				A1[j][k] += mesh1->normals[i][j] *
+					    mesh1->normals[i][k];
+	}
+	for (int i = 0; i < nv2; i++) {
+		if (!weights2[i])
+			continue;
+		for (int j = 0; j < 3; j++)
+			for (int k = j; k < 3; k++)
+				A2[j][k] += mesh2->normals[i][j] *
+					    mesh2->normals[i][k];
+	}
 
 	for (int j = 1; j < 3; j++) {
 		for (int k = 0; k < j; k++) {
@@ -530,39 +525,33 @@ static float ICP_iter(TriMesh *mesh1, TriMesh *mesh2,
 	}
 
 	double sum_sampcdf1 = 0, sum_sampcdf2 = 0;
-#pragma omp parallel
-	{
-#pragma omp parallel for reduction(+ : sum_sampcdf1)
-		for (int i = 0; i < nv1; i++) {
-			if (!weights1[i]) {
-				sampcdf1[i] = 0.0;
-				continue;
-			}
-			float s = 0.0f;
-			for (int j = 0; j < 3; j++)
-				s += eval1[j] * sqr(
-					A1[0][j] * mesh1->normals[i][0] +
-					A1[1][j] * mesh1->normals[i][1] +
-					A1[2][j] * mesh1->normals[i][2]);
-			sum_sampcdf1 += (sampcdf1[i] = s * weights1[i]);
+	for (int i = 0; i < nv1; i++) {
+		if (!weights1[i]) {
+			sampcdf1[i] = 0.0;
+			continue;
 		}
+		float s = 0.0f;
+		for (int j = 0; j < 3; j++)
+			s += eval1[j] * sqr(
+				A1[0][j] * mesh1->normals[i][0] +
+				A1[1][j] * mesh1->normals[i][1] +
+				A1[2][j] * mesh1->normals[i][2]);
+		sum_sampcdf1 += (sampcdf1[i] = s * weights1[i]);
+	}
 
-
-#pragma omp parallel for reduction(+ : sum_sampcdf2)
-		for (int i = 0; i < nv2; i++) {
-			if (!weights2[i]) {
-				sampcdf2[i] = 0.0;
-				continue;
-			}
-			float s = 0.0f;
-			for (int j = 0; j < 3; j++)
-				s += eval2[j] * sqr(
-					A2[0][j] * mesh2->normals[i][0] +
-					A2[1][j] * mesh2->normals[i][1] +
-					A2[2][j] * mesh2->normals[i][2]);
-			sum_sampcdf2 += (sampcdf2[i] = s * weights2[i]);
+	for (int i = 0; i < nv2; i++) {
+		if (!weights2[i]) {
+			sampcdf2[i] = 0.0;
+			continue;
 		}
-	} // omp parallel
+		float s = 0.0f;
+		for (int j = 0; j < 3; j++)
+			s += eval2[j] * sqr(
+				A2[0][j] * mesh2->normals[i][0] +
+				A2[1][j] * mesh2->normals[i][1] +
+				A2[2][j] * mesh2->normals[i][2]);
+		sum_sampcdf2 += (sampcdf2[i] = s * weights2[i]);
+	}
 
 	if (!sum_sampcdf1 || !sum_sampcdf2) {
 		if (verbose)
@@ -602,15 +591,10 @@ static void make_uniform_cdfs(
 	sampcdf2.resize(nv2);
 
 	double sum_sampcdf1 = 0, sum_sampcdf2 = 0;
-#pragma omp parallel
-	{
-#pragma omp for nowait reduction(+ : sum_sampcdf1)
-		for (int i = 0; i < nv1; i++)
-			sum_sampcdf1 += (sampcdf1[i] = weights1[i]);
-#pragma omp for reduction(+ : sum_sampcdf2)
-		for (int i = 0; i < nv2; i++)
-			sum_sampcdf2 += (sampcdf2[i] = weights2[i]);
-	}
+	for (int i = 0; i < nv1; i++)
+		sum_sampcdf1 += (sampcdf1[i] = weights1[i]);
+	for (int i = 0; i < nv2; i++)
+		sum_sampcdf2 += (sampcdf2[i] = weights2[i]);
 
 	float cdf_scale1 = 1 / sum_sampcdf1;
 	sampcdf1[0] *= cdf_scale1;

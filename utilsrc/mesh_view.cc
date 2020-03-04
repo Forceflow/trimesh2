@@ -652,6 +652,43 @@ void do_icp(int n)
 }
 
 
+// Automatically do ICP on two visible meshes.
+// If a mesh is selected, does ICP on it and next lower-numbered visible mesh.
+// If no mesh selected, does ICP on first two visible meshes.
+void auto_icp()
+{
+	int nmeshes = meshes.size();
+	if (nmeshes < 2)
+		return;
+	if (current_mesh >= 0) {
+		for (int icp_target = (current_mesh + nmeshes - 1) % nmeshes;
+		     icp_target != current_mesh;
+		     icp_target = (icp_target + nmeshes - 1) % nmeshes) {
+			if (!visible[icp_target])
+				continue;
+			do_icp(icp_target);
+		}
+	} else {
+		int icp_target, icp_source;
+		for (icp_target = 0; icp_target < nmeshes; icp_target++) {
+			if (visible[icp_target])
+				break;
+		}
+		if (icp_target == nmeshes)
+			return;
+		for (icp_source = icp_target + 1; icp_source < nmeshes; icp_source++) {
+			if (visible[icp_source])
+				break;
+		}
+		if (icp_source == nmeshes)
+			return;
+		set_current(icp_source);
+		do_icp(icp_target);
+		set_current(-1);
+	}
+}
+
+
 // Handle mouse button and motion events
 static unsigned buttonstate = 0;
 
@@ -827,6 +864,8 @@ void keyboardfunc(unsigned char key, int, int)
 			white_bg = !white_bg; break;
 		case 'I':
 			dump_image(); break;
+		case 'i':
+			auto_icp(); break;
 		case Ctrl+'x':
 			save_xforms();
 			break;
