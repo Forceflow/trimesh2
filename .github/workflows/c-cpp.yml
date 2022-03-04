@@ -17,5 +17,5 @@ jobs:
       run: | 
         sudo apt update
         sudo apt install -y mesa-common-dev libglu1-mesa-dev libxi-dev
-    - name: make
-      run: make
+    - name: make all
+      run: make all
