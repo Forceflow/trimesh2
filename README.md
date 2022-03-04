@@ -58,7 +58,7 @@ The following utility programs are included:
 This fork stays as close as possible to the original [trimesh2](http://gfx.cs.princeton.edu/proj/trimesh2/) code, only changing the actual source files when a solution for compilation errors cannot be reached through VS pre-build steps or preprocessor magic.
 
 Notable changes compared to vanilla trimesh2
- * MSVC project for Visual Studio Community Edition 2017 and 2019
+ * MSVC project for Visual Studio Community Edition 2022, 2019 and 2017
  * Fixes for FreeGlut / Gluit compilation
  * Fixes for wingetopt replacement in MSVC
  * Added 64-bit MSVC compilation support
