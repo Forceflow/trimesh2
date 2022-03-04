@@ -16,7 +16,7 @@ jobs:
     - name: install dependencies
       run: | 
         sudo apt update
-        sudo apt install -y install -y mesa-common-dev libglu1-mesa-dev libxi-dev
+        sudo apt install -y mesa-common-dev libglu1-mesa-dev libxi-dev
     - name: configure
       run: ./configure
     - name: make
