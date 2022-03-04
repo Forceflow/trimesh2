@@ -13,10 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: configure
+    - name: install dependencies
       run: | 
-        apt update
-        apt install -y install -y mesa-common-dev libglu1-mesa-dev libxi-dev
+        sudo apt update
+        sudo apt install -y install -y mesa-common-dev libglu1-mesa-dev libxi-dev
     - name: configure
       run: ./configure
     - name: make
