@@ -24,7 +24,7 @@ The original TriMesh2 project is quite Linux/GCC-oriented, and only has limited 
  * The (optional) ``mesh_view`` utility has dependencies on OpenGL and Freeglut, because it needs to display a window with a textured model
 
 ### Build steps
-  * For **Windows**, build solutions for VS2017 and VS2019 are provided in the `mscv`folder, verified working with the [free Community Editions](https://visualstudio.microsoft.com/vs/community/) of Visual Studio. The solutions contain both Debug and Release profiles for 32-bit and 64-bit builds.
+  * For **Windows**, build solutions for VS2022, VS2019 and VS2017 are provided in the `mscv`folder, verified working with the [free Community Editions](https://visualstudio.microsoft.com/vs/community/) of Visual Studio. The solutions contain both Debug and Release profiles for 32-bit and 64-bit builds.
     * The built libraries will be placed in a folder named `lib.(architecture).(visual studio version)` in the trimesh2 root folder. For example, for a 64-bit Visual Studio 2017 build, it will be `lib.win64.vs141`. The utilities will be placed in `util.(architecture).(visual studio version)`. This naming scheme is in place to avoid clashing trimesh2 versions.
    * For **Linux**, a makefile is provided. You might need additional packages before you can build the utilities on your system. On Ubuntu these are: `mesa-common-dev libglu1-mesa-dev libxi-dev`.
    * For **OSX**, I'm being told it builds using the makefile, but I have no way to check. If you encounter problems, please, file an issue report :)
